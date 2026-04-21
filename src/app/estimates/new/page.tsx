@@ -1,0 +1,310 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  garageSqft: number;
+  carPorts: number;
+  notes: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  pricingType: string;
+  price: number;
+  sectionId: string;
+  displayOrder: number;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  displayOrder: number;
+  products: Product[];
+}
+
+interface SelectedItem {
+  productId: string;
+  name: string;
+  pricingType: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export default function EstimateBuilder() {
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customer");
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+  }, [status, router]);
+
+  useEffect(() => {
+    if (customerId) {
+      fetchCustomer();
+      fetchSections();
+    }
+  }, [customerId]);
+
+  const fetchCustomer = async () => {
+    try {
+      const res = await fetch(`/api/customers/${customerId}`);
+      if (!res.ok) {
+        console.error("Failed to fetch customer:", res.status);
+        return;
+      }
+      const data = await res.json();
+      setCustomer(data);
+    } catch (error) {
+      console.error("Error fetching customer:", error);
+    }
+  };
+
+  const fetchSections = async () => {
+    try {
+      const res = await fetch("/api/sections");
+      if (!res.ok) {
+        console.error("Failed to fetch sections:", res.status);
+        setLoading(false);
+        return;
+      }
+      const allSections = await res.json();
+
+      const sectionsWithProducts = allSections.map((section: Section) => ({
+        ...section,
+        products: section.products.filter((p: Product) => p.isActive),
+      }));
+
+      setSections(sectionsWithProducts);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching sections:", error);
+      setLoading(false);
+    }
+  };
+
+  const calculatePrice = (product: Product): number => {
+    if (!customer) return 0;
+    if (product.pricingType === "PER_SQFT") {
+      return product.price * customer.garageSqft;
+    }
+    return product.price;
+  };
+
+  const handleProductToggle = (product: Product) => {
+    const existingItem = selectedItems.find((item) => item.productId === product.id);
+
+    if (existingItem) {
+      setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
+    } else {
+      const itemPrice = calculatePrice(product);
+      setSelectedItems([
+        ...selectedItems,
+        {
+          productId: product.id,
+          name: product.name,
+          pricingType: product.pricingType,
+          unitPrice: product.price,
+          quantity: 1,
+          totalPrice: itemPrice,
+        },
+      ]);
+    }
+  };
+
+  const getTotalPrice = (): number => {
+    return selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  };
+
+  const isProductSelected = (productId: string): boolean => {
+    return selectedItems.some((item) => item.productId === productId);
+  };
+
+  if (loading || !customer) return <div className="p-8">Loading...</div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <Link href="/customers" className="text-blue-600 hover:underline">
+            ← Back to Customers
+          </Link>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="grid grid-cols-3 gap-8">
+          {/* Left: Customer Info */}
+          <div className="col-span-1">
+            <div className="bg-white rounded-lg shadow p-6 sticky top-8">
+              <h2 className="text-2xl font-bold mb-4">Customer Info</h2>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="font-semibold text-gray-700">Name</p>
+                  <p className="text-gray-900">{customer.name}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Email</p>
+                  <p className="text-gray-900">{customer.email}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Phone</p>
+                  <p className="text-gray-900">{customer.phone}</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Address</p>
+                  <p className="text-gray-900">
+                    {customer.street}, {customer.city}, {customer.state} {customer.zip}
+                  </p>
+                </div>
+                <div className="pt-4 border-t">
+                  <p className="font-semibold text-gray-700">Garage Size</p>
+                  <p className="text-lg text-blue-600 font-bold">{customer.garageSqft} sqft</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Car Ports</p>
+                  <p className="text-lg text-blue-600 font-bold">{customer.carPorts}</p>
+                </div>
+                {customer.notes && (
+                  <div className="pt-4 border-t">
+                    <p className="font-semibold text-gray-700">Notes</p>
+                    <p className="text-gray-900 text-xs">{customer.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: Products */}
+          <div className="col-span-1">
+            <h2 className="text-2xl font-bold mb-6">Available Products</h2>
+            <div className="space-y-6">
+              {sections.map((section) => (
+                <div key={section.id} className="bg-white rounded-lg shadow p-6">
+                  <h3 className="text-lg font-bold text-blue-600 mb-4">{section.title}</h3>
+                  <div className="space-y-3">
+                    {section.products.length === 0 ? (
+                      <p className="text-gray-500 text-sm">No products in this section</p>
+                    ) : (
+                      section.products.map((product) => {
+                        const itemPrice = calculatePrice(product);
+                        const isSelected = isProductSelected(product.id);
+
+                        return (
+                          <label
+                            key={product.id}
+                            className={`flex items-start p-3 border rounded cursor-pointer transition ${
+                              isSelected
+                                ? "bg-blue-50 border-blue-500 border-2"
+                                : "border-gray-200 hover:bg-gray-50"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleProductToggle(product)}
+                              className="mt-1 mr-3"
+                            />
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900">{product.name}</p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                {product.pricingType === "PER_SQFT"
+                                  ? `$${product.price.toFixed(2)}/sqft`
+                                  : "Flat fee"}
+                              </p>
+                              <p className="text-sm font-bold text-blue-600 mt-1">
+                                ${itemPrice.toFixed(2)}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Selected Items & Total */}
+          <div className="col-span-1">
+            <div className="bg-white rounded-lg shadow p-6 sticky top-8">
+              <h2 className="text-2xl font-bold mb-4">Estimate Summary</h2>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
+                {selectedItems.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No items selected</p>
+                ) : (
+                  selectedItems.map((item) => (
+                    <div key={item.productId} className="border-b pb-3">
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="font-semibold text-gray-900">{item.name}</p>
+                        <button
+                          onClick={() =>
+                            setSelectedItems(
+                              selectedItems.filter((i) => i.productId !== item.productId)
+                            )
+                          }
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        {item.pricingType === "PER_SQFT"
+                          ? `$${item.unitPrice.toFixed(2)}/sqft × ${customer.garageSqft} sqft`
+                          : "Flat fee"}
+                      </p>
+                      <p className="text-sm font-bold text-blue-600 mt-1">
+                        ${item.totalPrice.toFixed(2)}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {selectedItems.length > 0 && (
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-2xl text-blue-600">${getTotalPrice().toFixed(2)}</span>
+                  </div>
+
+                  <button className="w-full bg-green-600 text-white py-3 rounded font-semibold hover:bg-green-700 transition">
+                    Generate PDF & Sign
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={() => router.back()}
+                className="w-full mt-3 bg-gray-200 text-gray-900 py-2 rounded hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

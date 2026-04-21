@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String     @id @default(cuid())
+  name      String
+  phone     String
+  email     String
+  street    String
+  city      String
+  state     String
+  zip       String
+  garageSqft Float
+  carPorts  Int
+  notes     String     @default("")
+  estimates Estimate[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Estimate {
+  id              String         @id @default(cuid())
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items           EstimateItem[]
+  totalPrice      Float
+  status          String         @default("draft")
+  signatureDataUrl String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model EstimateItem {
+  id        String   @id @default(cuid())
+  estimateId String
+  estimate  Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  price     Float
+}
+
+model Section {
+  id           String    @id @default(cuid())
+  title        String
+  displayOrder Int
+  products     Product[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Product {
+  id            String         @id @default(cuid())
+  sectionId     String
+  section       Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  name          String
+  pricingType   String
+  price         Float
+  isActive      Boolean        @default(true)
+  displayOrder  Int
+  estimateItems EstimateItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
