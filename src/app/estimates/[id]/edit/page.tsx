@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 
@@ -47,12 +47,26 @@ interface SelectedItem {
   totalPrice: number;
 }
 
-export default function EstimateBuilder() {
+interface EstimateItem {
+  id: string;
+  productId: string;
+  name: string;
+  price: number;
+}
+
+interface Estimate {
+  id: string;
+  customerId: string;
+  items: EstimateItem[];
+  totalPrice: number;
+  status: string;
+}
+
+export default function EstimateEditor() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [estimateId, setEstimateId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
@@ -60,31 +74,50 @@ export default function EstimateBuilder() {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const { status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const customerId = searchParams.get("customer");
+  const params = useParams();
+  const estimateId = params.id as string;
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
   useEffect(() => {
-    if (customerId) {
-      fetchCustomer();
+    if (estimateId) {
+      fetchEstimate();
       fetchSections();
     }
-  }, [customerId]);
+  }, [estimateId]);
 
-  const fetchCustomer = async () => {
+  const fetchEstimate = async () => {
     try {
-      const res = await fetch(`/api/customers/${customerId}`);
+      const res = await fetch(`/api/estimates/${estimateId}`);
       if (!res.ok) {
-        console.error("Failed to fetch customer:", res.status);
+        console.error("Failed to fetch estimate:", res.status);
+        setLoading(false);
         return;
       }
-      const data = await res.json();
-      setCustomer(data);
+      const estimate: Estimate = await res.json();
+
+      const res2 = await fetch(`/api/customers/${estimate.customerId}`);
+      if (!res2.ok) {
+        console.error("Failed to fetch customer:", res2.status);
+        setLoading(false);
+        return;
+      }
+      const customerData = await res2.json();
+      setCustomer(customerData);
+
+      const selected = estimate.items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        pricingType: "FLAT",
+        unitPrice: item.price,
+        quantity: 1,
+        totalPrice: item.price,
+      }));
+      setSelectedItems(selected);
     } catch (error) {
-      console.error("Error fetching customer:", error);
+      console.error("Error fetching estimate:", error);
     }
   };
 
@@ -125,11 +158,11 @@ export default function EstimateBuilder() {
   };
 
   const handleSaveCustomer = async () => {
-    if (!editForm) return;
+    if (!editForm || !customer) return;
 
     setSavingCustomer(true);
     try {
-      const res = await fetch(`/api/customers/${customerId}`, {
+      const res = await fetch(`/api/customers/${customer.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -151,47 +184,12 @@ export default function EstimateBuilder() {
     }
   };
 
-  const handleGeneratePDF = async () => {
+  const handleGeneratePDF = () => {
     if (!customer || selectedItems.length === 0) {
       alert("Please select at least one item");
       return;
     }
-
-    if (!estimateId) {
-      const totalPrice = getTotalPrice();
-      const items = selectedItems.map((item) => ({
-        productId: item.productId,
-        name: item.name,
-        price: item.totalPrice,
-      }));
-
-      try {
-        const res = await fetch("/api/estimates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customerId: customer.id,
-            items,
-            totalPrice,
-            status: "draft",
-          }),
-        });
-
-        if (!res.ok) {
-          alert("Failed to save estimate");
-          return;
-        }
-
-        const savedEstimate = await res.json();
-        setEstimateId(savedEstimate.id);
-        setShowSignatureModal(true);
-      } catch (error) {
-        console.error("Error saving estimate:", error);
-        alert("Error saving estimate");
-      }
-    } else {
-      setShowSignatureModal(true);
-    }
+    setShowSignatureModal(true);
   };
 
   const calculatePrice = (product: Product): number => {
@@ -243,46 +241,20 @@ export default function EstimateBuilder() {
         price: item.totalPrice,
       }));
 
-      let newEstimateId = estimateId;
+      const res = await fetch(`/api/estimates/${estimateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          totalPrice,
+          status: "draft",
+        }),
+      });
 
-      if (!estimateId) {
-        const res = await fetch("/api/estimates", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customerId: customer.id,
-            items,
-            totalPrice,
-            status: "draft",
-          }),
-        });
-
-        if (!res.ok) {
-          console.error("Failed to save estimate:", res.status);
-          setSaving(false);
-          return;
-        }
-
-        const savedEstimate = await res.json();
-        newEstimateId = savedEstimate.id;
-        setEstimateId(newEstimateId);
-        router.replace(`/estimates/${newEstimateId}/edit`);
-      } else {
-        const res = await fetch(`/api/estimates/${estimateId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items,
-            totalPrice,
-            status: "draft",
-          }),
-        });
-
-        if (!res.ok) {
-          console.error("Failed to update estimate:", res.status);
-          setSaving(false);
-          return;
-        }
+      if (!res.ok) {
+        console.error("Failed to update estimate:", res.status);
+        setSaving(false);
+        return;
       }
 
       setSaving(false);
@@ -583,7 +555,7 @@ export default function EstimateBuilder() {
         </div>
       </div>
 
-      {customer && estimateId && (
+      {customer && (
         <SignatureModal
           isOpen={showSignatureModal}
           onClose={() => setShowSignatureModal(false)}

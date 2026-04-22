@@ -32,6 +32,7 @@ model Estimate {
   totalPrice      Float
   status          String         @default("draft")
   signatureDataUrl String?
+  pdfUrl          String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }
@@ -42,6 +43,7 @@ model EstimateItem {
   estimate  Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id])
+  name      String
   price     Float
 }
 
