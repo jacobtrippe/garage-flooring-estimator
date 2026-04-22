@@ -29,6 +29,7 @@ interface Product {
   price: number;
   sectionId: string;
   displayOrder: number;
+  isActive: boolean;
 }
 
 interface Section {
