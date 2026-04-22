@@ -61,14 +61,14 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   section: {
-    padding: 30,
+    padding: 20,
   },
   headerInfoSection: {
-    padding: 30,
-    paddingBottom: 20,
+    padding: 20,
+    paddingBottom: 15,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 40,
+    gap: 30,
   },
   infoColumn: {
     flex: 1,
@@ -88,10 +88,10 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   scopeSection: {
-    paddingHorizontal: 30,
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    marginBottom: 12,
     borderTop: '1px solid #e0e0e0',
-    paddingTop: 12,
+    paddingTop: 8,
   },
   scopeTitle: {
     fontSize: 12,
@@ -166,9 +166,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 15,
-    paddingVertical: 20,
+    paddingVertical: 12,
     borderTop: '2px solid #2f2f30',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   totalLabel: {
     fontSize: 13,
@@ -186,9 +186,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   paymentSection: {
-    paddingHorizontal: 30,
-    marginTop: 20,
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 15,
   },
   paymentTitle: {
     fontSize: 12,
