@@ -10,30 +10,67 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2f2f30',
-    padding: 30,
+    padding: 25,
+    paddingVertical: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     color: '#ffffff',
+    gap: 20,
+  },
+  headerLeft: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 55,
+    height: 55,
+    marginBottom: 4,
+  },
+  companyName: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 0.8,
+  },
+  headerCenter: {
+    flex: 1,
+    textAlign: 'center',
   },
   headerRight: {
     textAlign: 'right',
+    justifyContent: 'flex-start',
   },
   estimateTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  estimateNumber: {
+    fontSize: 9,
+    color: '#bbbbbb',
+    marginBottom: 3,
+    fontWeight: 'normal',
   },
   estimateDate: {
-    fontSize: 11,
-    color: '#cccccc',
+    fontSize: 9,
+    color: '#bbbbbb',
+    fontWeight: 'normal',
   },
   section: {
     padding: 30,
+  },
+  headerInfoSection: {
+    padding: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 40,
+  },
+  infoColumn: {
+    flex: 1,
   },
   sectionTitle: {
     fontSize: 12,
@@ -46,6 +83,9 @@ const styles = StyleSheet.create({
   customerInfo: {
     marginBottom: 24,
   },
+  presentedByInfo: {
+    marginBottom: 24,
+  },
   customerName: {
     fontSize: 13,
     fontWeight: 'bold',
@@ -56,6 +96,45 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#333333',
     lineHeight: 1.5,
+  },
+  scopeSection: {
+    marginTop: 0,
+    marginBottom: 24,
+    borderTop: '1px solid #e0e0e0',
+    paddingTop: 6,
+  },
+  scopeTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#2f2f30',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  scopeSubtitle: {
+    fontSize: 11,
+    color: '#333333',
+    marginBottom: 12,
+    lineHeight: 1.6,
+  },
+  scopePackage: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#2f2f30',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  scopeList: {
+    fontSize: 10,
+    color: '#333333',
+    lineHeight: 1.8,
+    marginLeft: 10,
+  },
+  scopeCompletion: {
+    fontSize: 10,
+    color: '#333333',
+    marginTop: 12,
+    fontStyle: 'italic',
   },
   table: {
     marginBottom: 24,
@@ -104,6 +183,51 @@ const styles = StyleSheet.create({
     color: '#2f2f30',
     width: 100,
     textAlign: 'right',
+  },
+  paymentSection: {
+    paddingHorizontal: 30,
+    marginTop: 30,
+    marginBottom: 30,
+  },
+  paymentTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#2f2f30',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    fontSize: 11,
+  },
+  paymentLabel: {
+    flex: 1,
+    color: '#333333',
+  },
+  paymentAmount: {
+    width: 100,
+    textAlign: 'right',
+    fontWeight: 'bold',
+    color: '#2f2f30',
+  },
+  expectationSection: {
+    paddingHorizontal: 30,
+    marginBottom: 30,
+  },
+  expectationTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#2f2f30',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  expectationList: {
+    fontSize: 10,
+    color: '#333333',
+    lineHeight: 1.8,
   },
   signatureSection: {
     paddingHorizontal: 30,
@@ -179,27 +303,69 @@ export default function EstimatePDF({
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Image src="/logo.jpg" style={styles.logo} />
+          <View style={styles.headerLeft}>
+            <Image src="/logo.jpg" style={styles.logo} />
+            <Text style={styles.companyName}>PLATINUM INSTALLS</Text>
+          </View>
+          <View style={styles.headerCenter}>
+            <Text style={styles.estimateTitle}>Garage Floor Proposal</Text>
+          </View>
           <View style={styles.headerRight}>
-            <Text style={styles.estimateTitle}>ESTIMATE</Text>
-            <Text style={styles.estimateDate}>#{estimateId.slice(-8).toUpperCase()}</Text>
+            <Text style={styles.estimateNumber}>Proposal #{estimateId.slice(-8).toUpperCase()}</Text>
             <Text style={styles.estimateDate}>{date}</Text>
           </View>
         </View>
 
-        {/* Customer Info */}
+        {/* Customer Info & Presented By */}
+        <View style={styles.headerInfoSection}>
+          {/* Prepared For */}
+          <View style={styles.infoColumn}>
+            <Text style={styles.sectionTitle}>Prepared For</Text>
+            <View style={styles.customerInfo}>
+              <Text style={styles.customerName}>{customer.name}</Text>
+              <Text style={styles.customerDetails}>
+                {customer.street}
+              </Text>
+              <Text style={styles.customerDetails}>
+                {customer.city}, {customer.state} {customer.zip}
+              </Text>
+              <Text style={styles.customerDetails}>{customer.phone}</Text>
+              <Text style={styles.customerDetails}>{customer.email}</Text>
+            </View>
+          </View>
+
+          {/* Presented By */}
+          <View style={styles.infoColumn}>
+            <Text style={styles.sectionTitle}>Presented By</Text>
+            <View style={styles.presentedByInfo}>
+              <Text style={styles.customerName}>Jacob Trippe</Text>
+              <Text style={styles.customerDetails}>Platinum Installs</Text>
+              <Text style={styles.customerDetails}>(949) 289-4375</Text>
+              <Text style={styles.customerDetails}>jtplatinstalls.com</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Prepared For</Text>
-          <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>{customer.name}</Text>
-            <Text style={styles.customerDetails}>
-              {customer.street}
+
+          {/* Project Summary / Scope of Service */}
+          <View style={styles.scopeSection}>
+            <Text style={styles.scopeTitle}>Project Summary</Text>
+            <Text style={styles.scopeSubtitle}>
+              This proposal includes a complete garage floor coating system designed for a clean, modern appearance and long-term durability. Designed for homeowners wanting a high-end finish with a professional installation experience from start to finish.
             </Text>
-            <Text style={styles.customerDetails}>
-              {customer.city}, {customer.state} {customer.zip}
+            <Text style={styles.scopePackage}>Scope of Service</Text>
+            <Text style={styles.scopeList}>
+              • Professional surface preparation (diamond grinding){'\n'}
+              • Standard crack and joint repair (as needed){'\n'}
+              • Epoxy base coat for adhesion and coverage{'\n'}
+              • Decorative flake broadcast for a premium finish{'\n'}
+              • Polyaspartic top coat for durability, gloss, and stain resistance{'\n'}
+              • Clean edge work and detail finishing
             </Text>
-            <Text style={styles.customerDetails}>{customer.phone}</Text>
-            <Text style={styles.customerDetails}>{customer.email}</Text>
+            <Text style={styles.scopeCompletion}>
+              Typical Completion Time: Most garages are completed in 1 day, depending on concrete condition and weather.
+            </Text>
           </View>
         </View>
 
@@ -224,6 +390,32 @@ export default function EstimatePDF({
             <Text style={styles.totalLabel}>TOTAL</Text>
             <Text style={styles.totalValue}>${totalPrice.toFixed(2)}</Text>
           </View>
+        </View>
+
+        {/* Scheduling & Payment */}
+        <View style={styles.paymentSection}>
+          <Text style={styles.paymentTitle}>Scheduling & Payment</Text>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Deposit to Schedule:</Text>
+            <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Final Payment Due at Completion:</Text>
+            <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {/* What to Expect */}
+        <View style={styles.expectationSection}>
+          <Text style={styles.expectationTitle}>What to Expect</Text>
+          <Text style={styles.expectationList}>
+            1) Sign customer agreement{'\n'}
+            2) Confirm your preferred install date{'\n'}
+            3) Choose your design (base + flake color){'\n'}
+            4) Provide prep instructions (simple and quick){'\n'}
+            5) Arrive on time and complete the installation efficiently{'\n'}
+            6) Walk the finished floor with you before closeout
+          </Text>
         </View>
 
         {/* Signature */}

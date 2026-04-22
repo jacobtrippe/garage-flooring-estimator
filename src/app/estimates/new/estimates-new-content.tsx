@@ -154,7 +154,12 @@ export function EstimatesNewContent() {
 
   const handleGeneratePDF = async () => {
     if (!customer || selectedItems.length === 0) {
-      alert("Please select at least one item");
+      alert("Please select at least one item from each section");
+      return;
+    }
+
+    if (!areAllSectionsSelected()) {
+      alert("Please select one product from each section");
       return;
     }
 
@@ -210,8 +215,15 @@ export function EstimatesNewContent() {
       setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
     } else {
       const itemPrice = calculatePrice(product);
+      const itemsFromOtherSections = selectedItems.filter((item) => {
+        const itemProduct = sections
+          .flatMap((s) => s.products)
+          .find((p) => p.id === item.productId);
+        return itemProduct?.sectionId !== product.sectionId;
+      });
+
       setSelectedItems([
-        ...selectedItems,
+        ...itemsFromOtherSections,
         {
           productId: product.id,
           name: product.name,
@@ -222,6 +234,15 @@ export function EstimatesNewContent() {
         },
       ]);
     }
+  };
+
+  const areAllSectionsSelected = (): boolean => {
+    return sections.every((section) =>
+      selectedItems.some((item) => {
+        const product = section.products.find((p) => p.id === item.productId);
+        return product !== undefined;
+      })
+    );
   };
 
   const getTotalPrice = (): number => {
@@ -566,9 +587,10 @@ export function EstimatesNewContent() {
 
                   <button
                     onClick={handleGeneratePDF}
-                    className="w-full bg-green-600 text-white py-3 rounded font-semibold hover:bg-green-700 transition"
+                    disabled={!areAllSectionsSelected()}
+                    className="w-full bg-green-600 text-white py-3 rounded font-semibold hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    Generate PDF & Sign
+                    {areAllSectionsSelected() ? "Generate PDF & Sign" : "Select one from each section"}
                   </button>
                 </div>
               )}
