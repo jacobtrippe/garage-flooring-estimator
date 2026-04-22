@@ -363,7 +363,6 @@ export default function EstimatePDF({
             Typical Completion Time: Most garages are completed in 1 day, depending on concrete condition and weather.
           </Text>
         </View>
-        </View>
 
         {/* Items */}
         <View style={styles.section}>
