@@ -404,21 +404,22 @@ export default function EstimatePDF({
 
       {/* Page 2 */}
       <Page size="A4" style={styles.page}>
-        {/* What to Expect */}
-        <View style={styles.expectationSection}>
-          <Text style={styles.expectationTitle}>What to Expect</Text>
-          <Text style={styles.expectationList}>
-            1) Sign customer agreement{'\n'}
-            2) Confirm your preferred install date{'\n'}
-            3) Choose your design (base + flake color){'\n'}
-            4) Provide prep instructions (simple and quick){'\n'}
-            5) Arrive on time and complete the installation efficiently{'\n'}
-            6) Walk the finished floor with you before closeout
-          </Text>
-        </View>
+        <View style={{ padding: 20 }}>
+          {/* What to Expect */}
+          <View style={styles.expectationSection}>
+            <Text style={styles.expectationTitle}>What to Expect</Text>
+            <Text style={styles.expectationList}>
+              1) Sign customer agreement{'\n'}
+              2) Confirm your preferred install date{'\n'}
+              3) Choose your design (base + flake color){'\n'}
+              4) Provide prep instructions (simple and quick){'\n'}
+              5) Arrive on time and complete the installation efficiently{'\n'}
+              6) Walk the finished floor with you before closeout
+            </Text>
+          </View>
 
-        {/* Signature */}
-        <View style={styles.signatureSection}>
+          {/* Signature */}
+          <View style={styles.signatureSection}>
           <Text style={styles.signatureTitle}>Authorization</Text>
           <View style={styles.signatureContent}>
             {signatureDataUrl && (
@@ -429,6 +430,7 @@ export default function EstimatePDF({
               <Text style={styles.signatureDateValue}>{date}</Text>
             </View>
           </View>
+        </View>
         </View>
       </Page>
     </Document>
