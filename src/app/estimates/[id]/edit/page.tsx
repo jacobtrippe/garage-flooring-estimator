@@ -203,22 +203,42 @@ export default function EstimateEditor() {
 
   const handleProductToggle = (product: Product) => {
     const existingItem = selectedItems.find((item) => item.productId === product.id);
+    const productSection = sections.find((s) => s.id === product.sectionId);
+    const isDiscountSection = productSection?.title === "Discounts";
 
     if (existingItem) {
       setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
     } else {
+      let newItems = [...selectedItems];
+
+      // For non-discount sections, remove other products from the same section (one-per-section)
+      if (!isDiscountSection) {
+        newItems = newItems.filter((item) => {
+          const itemProduct = sections
+            .flatMap((section) => section.products)
+            .find((p) => p.id === item.productId);
+
+          // Keep item only if it's from a different section
+          if (itemProduct && itemProduct.sectionId === product.sectionId) {
+            return false; // Remove it (same section)
+          }
+          return true; // Keep it (different section or not found)
+        });
+      }
+      // For discount section, allow multiple selections - just add without removing
+
+      // Add the new product
       const itemPrice = calculatePrice(product);
-      setSelectedItems([
-        ...selectedItems,
-        {
-          productId: product.id,
-          name: product.name,
-          pricingType: product.pricingType,
-          unitPrice: product.price,
-          quantity: 1,
-          totalPrice: itemPrice,
-        },
-      ]);
+      newItems.push({
+        productId: product.id,
+        name: product.name,
+        pricingType: product.pricingType,
+        unitPrice: product.price,
+        quantity: 1,
+        totalPrice: itemPrice,
+      });
+
+      setSelectedItems(newItems);
     }
   };
 
