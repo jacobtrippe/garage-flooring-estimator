@@ -215,31 +215,31 @@ export function EstimatesNewContent() {
       // Deselect if already selected
       setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
     } else {
-      // Remove any product from the same section, then add this one
-      const itemPrice = calculatePrice(product);
-      const filteredItems = selectedItems.filter((item) => {
-        // Find which section this selected item belongs to
-        for (const section of sections) {
-          const foundProduct = section.products.find((p) => p.id === item.productId);
-          if (foundProduct) {
-            // Keep only if it's NOT from the same section as the product being added
-            return foundProduct.sectionId !== product.sectionId;
-          }
+      // Remove any product from the same section first
+      const newItems = selectedItems.filter((item) => {
+        const itemProduct = sections
+          .flatMap((section) => section.products)
+          .find((p) => p.id === item.productId);
+
+        // Keep item only if it's from a different section
+        if (itemProduct && itemProduct.sectionId === product.sectionId) {
+          return false; // Remove it (same section)
         }
-        return true;
+        return true; // Keep it (different section or not found)
       });
 
-      setSelectedItems([
-        ...filteredItems,
-        {
-          productId: product.id,
-          name: product.name,
-          pricingType: product.pricingType,
-          unitPrice: product.price,
-          quantity: 1,
-          totalPrice: itemPrice,
-        },
-      ]);
+      // Add the new product
+      const itemPrice = calculatePrice(product);
+      newItems.push({
+        productId: product.id,
+        name: product.name,
+        pricingType: product.pricingType,
+        unitPrice: product.price,
+        quantity: 1,
+        totalPrice: itemPrice,
+      });
+
+      setSelectedItems(newItems);
     }
   };
 
