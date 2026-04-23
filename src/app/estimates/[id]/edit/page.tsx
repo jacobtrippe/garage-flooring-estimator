@@ -268,16 +268,13 @@ export default function EstimateEditor() {
   if (loading || !customer) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <Link href="/customers" className="text-blue-600 hover:underline">
+    <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
+      <div className="max-w-6xl mx-auto p-8">
+        <div className="mb-6">
+          <Link href="/customers" className="font-medium hover:opacity-75 transition" style={{ color: '#1B3A5C' }}>
             ← Back to Customers
           </Link>
         </div>
-      </nav>
-
-      <div className="max-w-6xl mx-auto p-8">
         <div className="grid grid-cols-3 gap-8">
           {/* Left: Customer Info */}
           <div className="col-span-1">
@@ -286,7 +283,8 @@ export default function EstimateEditor() {
                 <h2 className="text-2xl font-bold">Customer Info</h2>
                 <button
                   onClick={toggleEditCustomer}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
+                  className="text-sm font-semibold hover:opacity-75 transition"
+                  style={{ color: '#1B3A5C' }}
                 >
                   {editingCustomer ? "Cancel" : "Edit"}
                 </button>
@@ -314,11 +312,11 @@ export default function EstimateEditor() {
                   </div>
                   <div className="pt-4 border-t">
                     <p className="font-semibold text-gray-700">Garage Size</p>
-                    <p className="text-lg text-blue-600 font-bold">{customer.garageSqft} sqft</p>
+                    <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{customer.garageSqft} sqft</p>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-700">Car Ports</p>
-                    <p className="text-lg text-blue-600 font-bold">{customer.carPorts}</p>
+                    <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{customer.carPorts}</p>
                   </div>
                   {customer.notes && (
                     <div className="pt-4 border-t">
@@ -435,11 +433,11 @@ export default function EstimateEditor() {
 
           {/* Middle: Products */}
           <div className="col-span-1">
-            <h2 className="text-2xl font-bold mb-6">Available Products</h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#2f2f30' }}>Available Products</h2>
             <div className="space-y-6">
               {sections.map((section) => (
-                <div key={section.id} className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-bold text-blue-600 mb-4">{section.title}</h3>
+                <div key={section.id} className="bg-white rounded-lg shadow-sm p-6">
+                  <h3 className="text-lg font-bold mb-4 pb-3 border-b-2" style={{ color: '#1B3A5C', borderColor: '#1B3A5C' }}>{section.title}</h3>
                   <div className="space-y-3">
                     {section.products.length === 0 ? (
                       <p className="text-gray-500 text-sm">No products in this section</p>
@@ -451,11 +449,15 @@ export default function EstimateEditor() {
                         return (
                           <label
                             key={product.id}
-                            className={`flex items-start p-3 border rounded cursor-pointer transition ${
+                            className={`flex items-start p-3 border-2 rounded-md cursor-pointer transition ${
                               isSelected
-                                ? "bg-blue-50 border-blue-500 border-2"
-                                : "border-gray-200 hover:bg-gray-50"
+                                ? "bg-opacity-10 border-2"
+                                : "border-gray-200 hover:border-gray-300"
                             }`}
+                            style={isSelected ? {
+                              backgroundColor: 'rgba(27, 58, 92, 0.08)',
+                              borderColor: '#1B3A5C'
+                            } : {}}
                           >
                             <input
                               type="checkbox"
@@ -465,7 +467,7 @@ export default function EstimateEditor() {
                             />
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900">{product.name}</p>
-                              <p className="text-sm font-bold text-blue-600 mt-2">
+                              <p className="text-sm font-bold mt-2" style={{ color: '#1B3A5C' }}>
                                 ${itemPrice.toFixed(2)}
                               </p>
                             </div>
@@ -481,8 +483,8 @@ export default function EstimateEditor() {
 
           {/* Right: Selected Items & Total */}
           <div className="col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 sticky top-8">
-              <h2 className="text-2xl font-bold mb-4">Estimate Summary</h2>
+            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+              <h2 className="text-2xl font-bold mb-4" style={{ color: '#2f2f30' }}>Estimate Summary</h2>
 
               <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
                 {selectedItems.length === 0 ? (
@@ -503,7 +505,7 @@ export default function EstimateEditor() {
                           ✕
                         </button>
                       </div>
-                      <p className="text-sm font-bold text-blue-600 mt-2">
+                      <p className="text-sm font-bold mt-2" style={{ color: '#1B3A5C' }}>
                         ${item.totalPrice.toFixed(2)}
                       </p>
                     </div>
@@ -513,22 +515,24 @@ export default function EstimateEditor() {
 
               {selectedItems.length > 0 && (
                 <div className="border-t pt-4 space-y-3">
-                  <div className="flex justify-between items-center text-lg font-bold">
+                  <div className="flex justify-between items-center text-lg font-bold" style={{ color: '#2f2f30' }}>
                     <span>Total:</span>
-                    <span className="text-2xl text-blue-600">${getTotalPrice().toFixed(2)}</span>
+                    <span className="text-2xl font-bold" style={{ color: '#1B3A5C' }}>${getTotalPrice().toFixed(2)}</span>
                   </div>
 
                   <button
                     onClick={handleSaveDraft}
                     disabled={saving}
-                    className="w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
+                    className="w-full text-white py-3 rounded-md font-semibold hover:opacity-90 transition disabled:opacity-50"
+                    style={{ backgroundColor: '#1B3A5C' }}
                   >
                     {saving ? "Saving..." : "Save Draft"}
                   </button>
 
                   <button
                     onClick={handleGeneratePDF}
-                    className="w-full bg-green-600 text-white py-3 rounded font-semibold hover:bg-green-700 transition"
+                    className="w-full text-white py-3 rounded-md font-semibold hover:opacity-90 transition"
+                    style={{ backgroundColor: '#1B3A5C' }}
                   >
                     Generate PDF & Sign
                   </button>
@@ -537,7 +541,8 @@ export default function EstimateEditor() {
 
               <button
                 onClick={() => router.back()}
-                className="w-full mt-3 bg-gray-200 text-gray-900 py-2 rounded hover:bg-gray-300 transition"
+                className="w-full mt-3 text-gray-900 py-2 rounded-md hover:opacity-75 transition font-medium"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 Cancel
               </button>
