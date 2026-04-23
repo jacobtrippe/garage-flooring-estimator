@@ -230,9 +230,10 @@ export default function Customers() {
                         <div>
                           <p className="font-semibold text-gray-900">{customer.name}</p>
                           {customer.createdAt && (
-                            <p className="text-xs text-gray-500">
-                              {new Date(customer.createdAt).toLocaleDateString()}
-                            </p>
+                            <div className="text-xs text-gray-500">
+                              <p>{new Date(customer.createdAt).toLocaleDateString()}</p>
+                              <p>{new Date(customer.createdAt).toLocaleTimeString()}</p>
+                            </div>
                           )}
                         </div>
                       </td>
