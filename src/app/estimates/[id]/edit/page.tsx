@@ -465,12 +465,7 @@ export default function EstimateEditor() {
                             />
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900">{product.name}</p>
-                              <p className="text-xs text-gray-600 mt-1">
-                                {product.pricingType === "PER_SQFT"
-                                  ? `$${product.price.toFixed(2)}/sqft`
-                                  : "Flat fee"}
-                              </p>
-                              <p className="text-sm font-bold text-blue-600 mt-1">
+                              <p className="text-sm font-bold text-blue-600 mt-2">
                                 ${itemPrice.toFixed(2)}
                               </p>
                             </div>
@@ -508,12 +503,7 @@ export default function EstimateEditor() {
                           ✕
                         </button>
                       </div>
-                      <p className="text-xs text-gray-600">
-                        {item.pricingType === "PER_SQFT"
-                          ? `$${item.unitPrice.toFixed(2)}/sqft × ${customer.garageSqft} sqft`
-                          : "Flat fee"}
-                      </p>
-                      <p className="text-sm font-bold text-blue-600 mt-1">
+                      <p className="text-sm font-bold text-blue-600 mt-2">
                         ${item.totalPrice.toFixed(2)}
                       </p>
                     </div>

@@ -542,12 +542,7 @@ export function EstimatesNewContent() {
                             </div>
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900">{product.name}</p>
-                              <p className="text-xs text-gray-600 mt-1">
-                                {product.pricingType === "PER_SQFT"
-                                  ? `$${product.price.toFixed(2)}/sqft`
-                                  : "Flat fee"}
-                              </p>
-                              <p className="text-sm font-bold mt-1" style={{ color: '#1B3A5C' }}>
+                              <p className="text-sm font-bold mt-2" style={{ color: '#1B3A5C' }}>
                                 ${itemPrice.toFixed(2)}
                               </p>
                             </div>
@@ -572,7 +567,7 @@ export function EstimatesNewContent() {
                 ) : (
                   selectedItems.map((item) => (
                     <div key={item.productId} className="border-b pb-3">
-                      <div className="flex justify-between items-start mb-1">
+                      <div className="flex justify-between items-start mb-2">
                         <p className="font-semibold text-gray-900">{item.name}</p>
                         <button
                           onClick={() =>
@@ -585,12 +580,7 @@ export function EstimatesNewContent() {
                           ✕
                         </button>
                       </div>
-                      <p className="text-xs text-gray-600">
-                        {item.pricingType === "PER_SQFT"
-                          ? `$${item.unitPrice.toFixed(2)}/sqft × ${customer.garageSqft} sqft`
-                          : "Flat fee"}
-                      </p>
-                      <p className="text-sm font-bold mt-1" style={{ color: '#1B3A5C' }}>
+                      <p className="text-sm font-bold" style={{ color: '#1B3A5C' }}>
                         ${item.totalPrice.toFixed(2)}
                       </p>
                     </div>
