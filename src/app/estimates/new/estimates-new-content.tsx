@@ -511,6 +511,12 @@ export function EstimatesNewContent() {
                               borderColor: '#1B3A5C'
                             } : {}}
                           >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleProductToggle(product)}
+                              className="sr-only"
+                            />
                             <div className="mt-0.5 mr-3 flex-shrink-0">
                               <div
                                 className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
