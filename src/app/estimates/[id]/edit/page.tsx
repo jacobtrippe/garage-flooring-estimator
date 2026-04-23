@@ -525,9 +525,11 @@ export default function EstimateEditor() {
                           ✕
                         </button>
                       </div>
-                      <p className="text-sm font-bold mt-2" style={{ color: '#1B3A5C' }}>
-                        ${item.totalPrice.toFixed(2)}
-                      </p>
+                      {item.totalPrice > 0 && (
+                        <p className="text-sm font-bold mt-2" style={{ color: '#1B3A5C' }}>
+                          ${item.totalPrice.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   ))
                 )}
