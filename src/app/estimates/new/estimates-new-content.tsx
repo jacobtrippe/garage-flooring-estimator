@@ -580,9 +580,9 @@ export function EstimatesNewContent() {
                           ✕
                         </button>
                       </div>
-                      {item.totalPrice > 0 && (
-                        <p className="text-sm font-bold" style={{ color: '#1B3A5C' }}>
-                          ${item.totalPrice.toFixed(2)}
+                      {item.totalPrice !== 0 && (
+                        <p className="text-sm font-bold" style={{ color: item.totalPrice < 0 ? '#dc2626' : '#1B3A5C' }}>
+                          {item.totalPrice < 0 ? '-$' : '$'}{Math.abs(item.totalPrice).toFixed(2)}
                         </p>
                       )}
                     </div>

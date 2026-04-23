@@ -375,7 +375,7 @@ export default function EstimatePDF({
             {items.map((item, idx) => (
               <View key={item.productId} style={idx % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
                 <Text style={styles.tableColName}>{item.name}</Text>
-                <Text style={styles.tableColPrice}>{item.totalPrice > 0 ? `$${item.totalPrice.toFixed(2)}` : ''}</Text>
+                <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
               </View>
             ))}
           </View>
