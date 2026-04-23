@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 interface Estimate {
@@ -175,33 +175,14 @@ export default function Customers() {
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Garage Flooring Estimator</h1>
-          <div className="flex gap-4">
-            <Link
-              href="/admin"
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-            >
-              Admin Settings
-            </Link>
-            <button
-              onClick={() => signOut()}
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
-
+    <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
       <div className="max-w-7xl mx-auto p-8">
         <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-3xl font-bold">Customers</h2>
+          <h2 className="text-3xl font-bold" style={{ color: '#2f2f30' }}>Customers</h2>
           <Link
             href="/customers/new"
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+            className="text-white px-6 py-2 rounded-md font-medium hover:opacity-90 transition"
+            style={{ backgroundColor: '#1B3A5C' }}
           >
             Add Customer
           </Link>
@@ -213,21 +194,22 @@ export default function Customers() {
             placeholder="Search by name, email, phone, sqft, car ports, or date..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': '#1B3A5C' } as any}
           />
         </div>
 
-        <div className="bg-white rounded-lg shadow pb-64">
+        <div className="bg-white rounded-lg shadow-sm pb-64">
           <div className="overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-gray-100 border-b">
+            <thead className="border-b" style={{ backgroundColor: '#F9FAFB', borderColor: '#e5e7eb' }}>
               <tr>
-                <th className="px-6 py-3 text-left font-semibold">Name</th>
-                <th className="px-6 py-3 text-left font-semibold">Email</th>
-                <th className="px-6 py-3 text-left font-semibold">Phone</th>
-                <th className="px-6 py-3 text-left font-semibold">Sqft</th>
-                <th className="px-6 py-3 text-left font-semibold">Car</th>
-                <th className="px-6 py-3 text-left font-semibold">Actions</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Name</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Email</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Phone</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Sqft</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Car</th>
+                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -259,12 +241,13 @@ export default function Customers() {
                       <td className="px-6 py-4">{customer.garageSqft}</td>
                       <td className="px-6 py-4">{customer.carPorts}</td>
                       <td className="px-6 py-4">
-                        <div className="flex gap-2 items-center">
+                        <div className="flex gap-2 items-center flex-wrap">
                           <button
                             onClick={() => handleEditCustomer(customer)}
-                            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+                            className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                            style={{ backgroundColor: '#1B3A5C' }}
                           >
-                            ✎ Edit
+                            Edit
                           </button>
                           {estimates && estimates.length > 0 ? (
                             <>
@@ -273,14 +256,16 @@ export default function Customers() {
                                   href={estimates[0].pdfUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                  style={{ backgroundColor: '#1B3A5C' }}
                                 >
-                                  📄 Signed Estimate
+                                  Signed Estimate
                                 </a>
                               ) : (
                                 <Link
                                   href={`/estimates/${estimates[0].id}/edit`}
-                                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                  style={{ backgroundColor: '#1B3A5C' }}
                                 >
                                   Current Estimate
                                 </Link>
@@ -289,14 +274,15 @@ export default function Customers() {
                               <div className="relative inline-block" ref={(el) => { if (el) dropdownRefs.current[customer.id] = el; }}>
                                 <button
                                   onClick={() => toggleDropdown(customer.id)}
-                                  className="bg-gray-200 text-gray-900 px-3 py-2 rounded hover:bg-gray-300"
+                                  className="text-white px-3 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                  style={{ backgroundColor: '#C8C9CA', color: '#2f2f30' }}
                                 >
-                                  ▼ ({estimates.length})
+                                  ({estimates.length})
                                 </button>
 
                                 {openDropdownId === customer.id && (
-                                  <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-56 max-h-64 overflow-y-auto">
-                                    <div className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-50 border-b sticky top-0">
+                                  <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-56 max-h-64 overflow-y-auto">
+                                    <div className="px-4 py-2 text-xs font-semibold text-gray-600 border-b sticky top-0" style={{ backgroundColor: '#F9FAFB' }}>
                                       Saved Estimates ({estimates.length})
                                     </div>
                                     {Array.isArray(estimates) && estimates.map((estimate: any, idx: number) => {
@@ -305,18 +291,20 @@ export default function Customers() {
                                         <div key={estimate.id} className="border-b">
                                           <Link
                                             href={`/estimates/${estimate.id}/edit`}
-                                            className="block px-4 py-2 hover:bg-blue-50 text-sm"
+                                            className="block px-4 py-2 hover:opacity-75 text-sm"
+                                            style={{ color: '#2f2f30' }}
                                           >
-                                            {idx === 0 && "⭐ "} ${(estimate.totalPrice || 0).toFixed(2)} • {new Date(estimate.createdAt).toLocaleDateString()}
+                                            {idx === 0 && "★ "} ${(estimate.totalPrice || 0).toFixed(2)} • {new Date(estimate.createdAt).toLocaleDateString()}
                                           </Link>
                                           {estimate.pdfUrl && (
                                             <a
                                               href={estimate.pdfUrl}
                                               target="_blank"
                                               rel="noopener noreferrer"
-                                              className="block px-4 py-1 text-xs text-green-600 hover:bg-green-50"
+                                              className="block px-4 py-1 text-xs hover:opacity-75"
+                                              style={{ color: '#1B3A5C' }}
                                             >
-                                              📄 Download PDF
+                                              Download PDF
                                             </a>
                                           )}
                                         </div>
@@ -326,9 +314,10 @@ export default function Customers() {
 
                                     <Link
                                       href={`/estimates/new?customer=${customer.id}`}
-                                      className="block px-4 py-2 hover:bg-green-50 text-sm text-green-700 font-semibold"
+                                      className="block px-4 py-2 text-sm font-semibold hover:opacity-90"
+                                      style={{ color: '#1B3A5C', backgroundColor: '#F9FAFB' }}
                                     >
-                                      ➕ New Estimate
+                                      + New Estimate
                                     </Link>
                                   </div>
                                 )}
@@ -337,7 +326,8 @@ export default function Customers() {
                           ) : (
                             <Link
                               href={`/estimates/new?customer=${customer.id}`}
-                              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                              className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                              style={{ backgroundColor: '#1B3A5C' }}
                             >
                               New Estimate
                             </Link>
@@ -407,7 +397,7 @@ export default function Customers() {
       {confirmDelete && editForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4 text-red-600">Delete Customer?</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#dc2626' }}>Delete Customer?</h2>
             <p className="text-gray-700 mb-2">
               Are you sure you want to delete <strong>{editForm.name}</strong>?
             </p>
@@ -418,14 +408,16 @@ export default function Customers() {
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400"
+                className="flex-1 px-4 py-2 rounded-md font-semibold hover:opacity-90 transition text-gray-900"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteCustomer}
                 disabled={deletingCustomer}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 disabled:bg-gray-400"
+                className="flex-1 text-white px-4 py-2 rounded-md font-semibold hover:opacity-90 transition disabled:opacity-50"
+                style={{ backgroundColor: '#dc2626' }}
               >
                 {deletingCustomer ? 'Deleting...' : 'Yes, Delete'}
               </button>
@@ -438,55 +430,60 @@ export default function Customers() {
       {editingCustomerId && editForm && !confirmDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-6">Edit Customer</h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#2f2f30' }}>Edit Customer</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#2f2f30' }}>Name</label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => handleCustomerFieldChange('name', e.target.value)}
-                  className="w-full px-4 py-2 border rounded"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:outline-none"
+                  style={{ '--tw-ring-color': '#1B3A5C' } as any}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#2f2f30' }}>Email</label>
                 <input
                   type="email"
                   value={editForm.email}
                   onChange={(e) => handleCustomerFieldChange('email', e.target.value)}
-                  className="w-full px-4 py-2 border rounded"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:outline-none"
+                  style={{ '--tw-ring-color': '#1B3A5C' } as any}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#2f2f30' }}>Phone</label>
                 <input
                   type="tel"
                   value={editForm.phone}
                   onChange={(e) => handleCustomerFieldChange('phone', e.target.value)}
-                  className="w-full px-4 py-2 border rounded"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:outline-none"
+                  style={{ '--tw-ring-color': '#1B3A5C' } as any}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Garage Sqft</label>
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#2f2f30' }}>Garage Sqft</label>
                 <input
                   type="number"
                   value={editForm.garageSqft}
                   onChange={(e) => handleCustomerFieldChange('garageSqft', parseFloat(e.target.value))}
-                  className="w-full px-4 py-2 border rounded"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:outline-none"
+                  style={{ '--tw-ring-color': '#1B3A5C' } as any}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Car Ports</label>
+                <label className="block text-sm font-semibold mb-1" style={{ color: '#2f2f30' }}>Car Ports</label>
                 <select
                   value={editForm.carPorts}
                   onChange={(e) => handleCustomerFieldChange('carPorts', parseInt(e.target.value))}
-                  className="w-full px-4 py-2 border rounded"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:outline-none"
+                  style={{ '--tw-ring-color': '#1B3A5C' } as any}
                 >
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -503,22 +500,25 @@ export default function Customers() {
                   setEditForm(null);
                   setConfirmDelete(false);
                 }}
-                className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400"
+                className="flex-1 px-4 py-2 rounded-md font-semibold hover:opacity-90 transition text-gray-900"
+                style={{ backgroundColor: '#e5e7eb' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveCustomer}
                 disabled={savingCustomer}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 disabled:bg-gray-400"
+                className="flex-1 text-white px-4 py-2 rounded-md font-semibold hover:opacity-90 transition disabled:opacity-50"
+                style={{ backgroundColor: '#1B3A5C' }}
               >
                 {savingCustomer ? 'Saving...' : 'Save'}
               </button>
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="flex-1 bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700"
+                className="flex-1 text-white px-4 py-2 rounded-md font-semibold hover:opacity-90 transition"
+                style={{ backgroundColor: '#dc2626' }}
               >
-                🗑 Delete
+                Delete
               </button>
             </div>
           </div>
