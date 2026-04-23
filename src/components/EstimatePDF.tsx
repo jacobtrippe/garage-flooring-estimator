@@ -387,24 +387,24 @@ export default function EstimatePDF({
           </View>
         </View>
 
-        {/* Scheduling & Payment */}
-        <View style={styles.paymentSection}>
-          <Text style={styles.paymentTitle}>Scheduling & Payment</Text>
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Deposit to Schedule:</Text>
-            <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
-          </View>
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Final Payment Due at Completion:</Text>
-            <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
-          </View>
-        </View>
-
       </Page>
 
       {/* Page 2 */}
       <Page size="A4" style={styles.page}>
         <View style={{ padding: 20 }}>
+          {/* Scheduling & Payment */}
+          <View style={styles.paymentSection}>
+            <Text style={styles.paymentTitle}>Scheduling & Payment</Text>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Deposit to Schedule:</Text>
+              <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+            </View>
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>Final Payment Due at Completion:</Text>
+              <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+            </View>
+          </View>
+
           {/* What to Expect */}
           <View style={styles.expectationSection}>
             <Text style={styles.expectationTitle}>What to Expect</Text>
