@@ -301,7 +301,7 @@ export default function EstimatePDF({
 }: EstimatePDFProps) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -387,10 +387,6 @@ export default function EstimatePDF({
           </View>
         </View>
 
-      </Page>
-
-      {/* Page 2 */}
-      <Page size="A4" style={styles.page}>
         <View style={{ padding: 20 }}>
           {/* Scheduling & Payment */}
           <View style={styles.paymentSection}>
