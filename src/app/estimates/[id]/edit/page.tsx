@@ -435,10 +435,7 @@ export default function EstimateEditor() {
 
           {/* Middle: Products */}
           <div className="col-span-1">
-            <h2 className="text-2xl font-bold mb-6">Available Products <span className="text-sm font-normal text-gray-600">(Locked)</span></h2>
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-sm text-blue-700">
-              This estimate has been saved. Product selections are locked to maintain consistency.
-            </div>
+            <h2 className="text-2xl font-bold mb-6">Available Products</h2>
             <div className="space-y-6">
               {sections.map((section) => (
                 <div key={section.id} className="bg-white rounded-lg shadow p-6">
@@ -454,17 +451,16 @@ export default function EstimateEditor() {
                         return (
                           <label
                             key={product.id}
-                            className={`flex items-start p-3 border rounded transition cursor-not-allowed opacity-60 ${
+                            className={`flex items-start p-3 border rounded cursor-pointer transition ${
                               isSelected
                                 ? "bg-blue-50 border-blue-500 border-2"
-                                : "border-gray-200"
+                                : "border-gray-200 hover:bg-gray-50"
                             }`}
                           >
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleProductToggle(product)}
-                              disabled={true}
                               className="mt-1 mr-3"
                             />
                             <div className="flex-1">

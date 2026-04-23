@@ -498,15 +498,7 @@ export function EstimatesNewContent() {
 
           {/* Middle: Products */}
           <div className="col-span-1">
-            <h2 className="text-2xl font-bold mb-6" style={{ color: '#2f2f30' }}>
-              Available Products
-              {estimateId && <span className="text-sm font-normal text-gray-600 ml-2">(Locked)</span>}
-            </h2>
-            {estimateId && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-sm" style={{ color: '#1B3A5C' }}>
-                This estimate has been saved. Product selections are locked to maintain consistency.
-              </div>
-            )}
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#2f2f30' }}>Available Products</h2>
             <div className="space-y-6">
               {sections.map((section) => (
                 <div key={section.id} className="bg-white rounded-lg shadow-sm p-6">
@@ -518,14 +510,11 @@ export function EstimatesNewContent() {
                       section.products.map((product) => {
                         const itemPrice = calculatePrice(product);
                         const isSelected = isProductSelected(product.id);
-                        const isLocked = !!estimateId;
 
                         return (
                           <label
                             key={product.id}
-                            className={`flex items-start p-4 border-2 rounded-md transition ${
-                              isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                            } ${
+                            className={`flex items-start p-4 border-2 rounded-md cursor-pointer transition ${
                               isSelected
                                 ? "bg-opacity-10 border-2"
                                 : "border-gray-200 hover:border-gray-300"
@@ -539,7 +528,6 @@ export function EstimatesNewContent() {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleProductToggle(product)}
-                              disabled={isLocked}
                               className="sr-only"
                             />
                             <div className="mt-0.5 mr-3 flex-shrink-0">
