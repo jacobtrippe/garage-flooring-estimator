@@ -210,23 +210,30 @@ export function EstimatesNewContent() {
 
   const handleProductToggle = (product: Product) => {
     const existingItem = selectedItems.find((item) => item.productId === product.id);
+    const productSection = sections.find((s) => s.id === product.sectionId);
+    const isDiscountSection = productSection?.title === "Discounts";
 
     if (existingItem) {
       // Deselect if already selected
       setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
     } else {
-      // Remove any product from the same section first
-      const newItems = selectedItems.filter((item) => {
-        const itemProduct = sections
-          .flatMap((section) => section.products)
-          .find((p) => p.id === item.productId);
+      let newItems = [...selectedItems];
 
-        // Keep item only if it's from a different section
-        if (itemProduct && itemProduct.sectionId === product.sectionId) {
-          return false; // Remove it (same section)
-        }
-        return true; // Keep it (different section or not found)
-      });
+      // For non-discount sections, remove other products from the same section (one-per-section)
+      if (!isDiscountSection) {
+        newItems = newItems.filter((item) => {
+          const itemProduct = sections
+            .flatMap((section) => section.products)
+            .find((p) => p.id === item.productId);
+
+          // Keep item only if it's from a different section
+          if (itemProduct && itemProduct.sectionId === product.sectionId) {
+            return false; // Remove it (same section)
+          }
+          return true; // Keep it (different section or not found)
+        });
+      }
+      // For discount section, allow multiple selections - just add without removing
 
       // Add the new product
       const itemPrice = calculatePrice(product);
@@ -244,12 +251,18 @@ export function EstimatesNewContent() {
   };
 
   const areAllSectionsSelected = (): boolean => {
-    return sections.every((section) =>
-      selectedItems.some((item) => {
+    return sections.every((section) => {
+      // Discounts section is optional - skip the requirement
+      if (section.title === "Discounts") {
+        return true;
+      }
+
+      // All other sections require at least one selection
+      return selectedItems.some((item) => {
         const product = section.products.find((p) => p.id === item.productId);
         return product !== undefined;
-      })
-    );
+      });
+    });
   };
 
   const getTotalPrice = (): number => {
