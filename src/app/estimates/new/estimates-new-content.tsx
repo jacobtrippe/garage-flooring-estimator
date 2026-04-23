@@ -212,18 +212,25 @@ export function EstimatesNewContent() {
     const existingItem = selectedItems.find((item) => item.productId === product.id);
 
     if (existingItem) {
+      // Deselect if already selected
       setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
     } else {
+      // Remove any product from the same section, then add this one
       const itemPrice = calculatePrice(product);
-      const itemsFromOtherSections = selectedItems.filter((item) => {
-        const itemProduct = sections
-          .flatMap((s) => s.products)
-          .find((p) => p.id === item.productId);
-        return itemProduct?.sectionId !== product.sectionId;
+      const filteredItems = selectedItems.filter((item) => {
+        // Find which section this selected item belongs to
+        for (const section of sections) {
+          const foundProduct = section.products.find((p) => p.id === item.productId);
+          if (foundProduct) {
+            // Keep only if it's NOT from the same section as the product being added
+            return foundProduct.sectionId !== product.sectionId;
+          }
+        }
+        return true;
       });
 
       setSelectedItems([
-        ...itemsFromOtherSections,
+        ...filteredItems,
         {
           productId: product.id,
           name: product.name,
