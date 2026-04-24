@@ -39,6 +39,12 @@ export default function Navigation() {
             Customers
           </Link>
           <Link
+            href="/inquiries"
+            className={`font-medium transition ${pathname.includes('/inquiries') ? 'text-white' : 'text-gray-300 hover:text-white'}`}
+          >
+            Inquiries
+          </Link>
+          <Link
             href="/admin"
             className={`font-medium transition ${pathname.includes('/admin') ? 'text-white' : 'text-gray-300 hover:text-white'}`}
           >
