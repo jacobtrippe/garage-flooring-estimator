@@ -69,3 +69,16 @@ model Product {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
+
+model PlatinumInquiry {
+  id            String   @id @default(cuid())
+  firstName     String
+  lastName      String
+  phone         String
+  projectType   String
+  garageSize    String
+  coatingSystem String?
+  projectDetails String?
+  address       String?
+  createdAt     DateTime @default(now())
+}
