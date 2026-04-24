@@ -41,15 +41,17 @@ export default function InquiriesPage() {
 
   async function createCustomerFromInquiry(inquiry: PlatinumInquiry) {
     try {
-      // Map garage size to car ports
-      const carPortMap: Record<string, number> = {
-        '1 Car': 1,
-        '2 Car': 2,
-        '3 Car': 3,
-        '4 Car': 4,
-        '5+ Car': 5,
-        'Commercial Site': 10,
+      // Map garage size to car ports and square footage
+      const garageMap: Record<string, { carPorts: number; sqft: number | string }> = {
+        '1 Car': { carPorts: 1, sqft: 200 },
+        '2 Car': { carPorts: 2, sqft: 400 },
+        '3 Car': { carPorts: 3, sqft: 600 },
+        '4 Car': { carPorts: 4, sqft: 800 },
+        '5+ Car': { carPorts: 5, sqft: 1000 },
+        'Commercial Site': { carPorts: 10, sqft: 'unknown' },
       };
+
+      const garageInfo = garageMap[inquiry.garageSize] || { carPorts: 2, sqft: 400 };
 
       // Extract city from address if available
       const addressParts = inquiry.address?.split(',') || [];
@@ -63,8 +65,8 @@ export default function InquiriesPage() {
         city: city || '',
         state: 'TX', // Default to Texas
         zip: '',
-        garageSqft: inquiry.garageSize === 'Commercial Site' ? 5000 : 500,
-        carPorts: carPortMap[inquiry.garageSize] || 2,
+        garageSqft: typeof garageInfo.sqft === 'number' ? garageInfo.sqft : 5000,
+        carPorts: garageInfo.carPorts,
         notes: `Project Type: ${inquiry.projectType}\nCoating System: ${inquiry.coatingSystem || 'Not specified'}\nDetails: ${inquiry.projectDetails || 'None provided'}\n\nFrom Platinum Installs Inquiry`,
       };
 
