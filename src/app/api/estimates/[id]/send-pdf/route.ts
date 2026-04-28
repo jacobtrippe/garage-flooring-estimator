@@ -28,6 +28,8 @@ export async function POST(
       return NextResponse.json({ error: 'PDF not ready' }, { status: 400 });
     }
 
+    const buttonText = estimate.signatureDataUrl ? 'Download Signed Estimate' : 'Download Estimate';
+
     const { error: emailError } = await resend.emails.send({
       from: 'Platinum Installs <noreply@platinuminstallstx.com>',
       to: estimate.customer.email,
@@ -42,7 +44,7 @@ export async function POST(
           </div>
           <p>
             <a href="${estimate.pdfUrl}" style="display: inline-block; background-color: #2f2f30; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-              Download Signed Estimate
+              ${buttonText}
             </a>
           </p>
           <p style="margin-top: 30px; font-size: 14px; color: #666;">Thank you for choosing Platinum Installs!</p>

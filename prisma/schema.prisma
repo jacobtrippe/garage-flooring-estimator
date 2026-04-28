@@ -33,6 +33,7 @@ model Estimate {
   status          String         @default("draft")
   signatureDataUrl String?
   pdfUrl          String?
+  installationDate String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }

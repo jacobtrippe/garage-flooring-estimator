@@ -35,13 +35,14 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { items, totalPrice, status, signatureDataUrl } = body;
+    const { items, totalPrice, status, signatureDataUrl, installationDate } = body;
 
     const updateData: any = {};
 
     if (totalPrice !== undefined) updateData.totalPrice = totalPrice;
     if (status !== undefined) updateData.status = status;
     if (signatureDataUrl !== undefined) updateData.signatureDataUrl = signatureDataUrl;
+    if (installationDate !== undefined) updateData.installationDate = installationDate;
 
     if (items && Array.isArray(items)) {
       updateData.items = {
