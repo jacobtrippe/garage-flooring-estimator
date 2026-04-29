@@ -320,8 +320,17 @@ export function ProductsAdminContent() {
     if (!confirm(`Delete product "${product?.name}"? This action cannot be undone.`)) {
       return;
     }
-    await fetch(`/api/products?id=${id}`, { method: "DELETE" });
-    fetchProducts();
+    try {
+      const res = await fetch(`/api/products?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert(`Failed to delete product: ${res.statusText}`);
+        return;
+      }
+      fetchProducts();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Error deleting product');
+    }
   };
 
   if (loading) return <div className="p-8">Loading...</div>;

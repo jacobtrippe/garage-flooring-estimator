@@ -223,8 +223,17 @@ export default function SectionsAdmin() {
     if (!confirm(`Delete section "${section?.title}"? This action cannot be undone.`)) {
       return;
     }
-    await fetch(`/api/sections/${id}`, { method: "DELETE" });
-    fetchSections();
+    try {
+      const res = await fetch(`/api/sections/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert(`Failed to delete section: ${res.statusText}`);
+        return;
+      }
+      fetchSections();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Error deleting section');
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {

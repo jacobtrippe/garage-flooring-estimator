@@ -46,7 +46,7 @@ model EstimateItem {
   estimateId String
   estimate  Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name      String
   price     Float
 }
