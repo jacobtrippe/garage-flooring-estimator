@@ -289,7 +289,7 @@ export default function EstimateEditor() {
   const handleProductToggle = (product: Product) => {
     const existingItem = selectedItems.find((item) => item.productId === product.id);
     const productSection = sections.find((s) => s.id === product.sectionId);
-    const isDiscountSection = productSection?.title === "Discounts";
+    const isMultiSelectSection = productSection?.title === "Discounts" || productSection?.title === "Exterior Prep";
 
     if (existingItem) {
       // Deselect if already selected
@@ -298,8 +298,8 @@ export default function EstimateEditor() {
     } else {
       let newItems = [...selectedItems];
 
-      // For non-discount sections, remove other products from the same section (one-per-section)
-      if (!isDiscountSection) {
+      // For non-multi-select sections, remove other products from the same section (one-per-section)
+      if (!isMultiSelectSection) {
         newItems = newItems.filter((item) => {
           const itemProduct = sections
             .flatMap((section) => section.products)
@@ -312,7 +312,7 @@ export default function EstimateEditor() {
           return true; // Keep it (different section or not found)
         });
       }
-      // For discount section, allow multiple selections - just add without removing
+      // For multi-select sections (Discounts, Exterior Prep), allow multiple selections - just add without removing
 
       // Add the new product
       newItems.push({
