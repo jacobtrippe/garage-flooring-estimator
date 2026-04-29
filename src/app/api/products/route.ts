@@ -30,12 +30,13 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const { id, ...data } = await req.json();
+  const updateData: any = { ...data };
+  if (data.price !== undefined) {
+    updateData.price = parseFloat(data.price);
+  }
   const product = await prisma.product.update({
     where: { id },
-    data: {
-      ...data,
-      price: parseFloat(data.price),
-    },
+    data: updateData,
   });
   return NextResponse.json(product);
 }

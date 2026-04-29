@@ -1,9 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Product {
   id: string;
@@ -20,6 +36,149 @@ interface Section {
   title: string;
 }
 
+function SortableProductRow({
+  product,
+  editingId,
+  editName,
+  editPricingType,
+  editPrice,
+  onEditName,
+  onEditPricingType,
+  onEditPrice,
+  onSaveEdit,
+  onCancelEdit,
+  onToggleActive,
+  onDelete,
+  onStartEdit,
+}: {
+  product: Product;
+  editingId: string | null;
+  editName: string;
+  editPricingType: string;
+  editPrice: string;
+  onEditName: (val: string) => void;
+  onEditPricingType: (val: string) => void;
+  onEditPrice: (val: string) => void;
+  onSaveEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
+  onDelete: (id: string) => void;
+  onStartEdit: (product: Product) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    backgroundColor: isDragging ? "#eff6ff" : "",
+  };
+
+  return (
+    <tr ref={setNodeRef} style={style} className="border-b hover:bg-gray-50">
+      <td
+        className="px-4 py-4 cursor-grab active:cursor-grabbing text-gray-400"
+        {...attributes}
+        {...listeners}
+      >
+        ⋮⋮
+      </td>
+      {editingId === product.id ? (
+        <>
+          <td className="px-6 py-4">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => onEditName(e.target.value)}
+              className="border rounded px-3 py-1 w-full"
+            />
+          </td>
+          <td className="px-6 py-4">
+            <select
+              value={editPricingType}
+              onChange={(e) => onEditPricingType(e.target.value)}
+              className="border rounded px-3 py-1"
+            >
+              <option value="PER_SQFT">Per Sqft</option>
+              <option value="FLAT">Flat Fee</option>
+            </select>
+          </td>
+          <td className="px-6 py-4">
+            <input
+              type="number"
+              step="0.01"
+              value={editPrice}
+              onChange={(e) => onEditPrice(e.target.value)}
+              className="border rounded px-3 py-1 w-24"
+            />
+          </td>
+          <td className="px-6 py-4">
+            <button
+              onClick={() => onToggleActive(product.id, product.isActive)}
+              className={`px-3 py-1 rounded text-white text-sm ${
+                product.isActive ? "bg-green-600" : "bg-gray-400"
+              }`}
+            >
+              {product.isActive ? "Active" : "Inactive"}
+            </button>
+          </td>
+          <td className="px-6 py-4 space-x-2">
+            <button
+              onClick={() => onSaveEdit(product.id)}
+              className="text-green-600 hover:underline text-sm font-semibold"
+            >
+              Save
+            </button>
+            <button
+              onClick={onCancelEdit}
+              className="text-gray-600 hover:underline text-sm"
+            >
+              Cancel
+            </button>
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="px-6 py-4">{product.name}</td>
+          <td className="px-6 py-4">{product.pricingType}</td>
+          <td className="px-6 py-4">${product.price.toFixed(2)}</td>
+          <td className="px-6 py-4">
+            <button
+              onClick={() => onToggleActive(product.id, product.isActive)}
+              className={`px-3 py-1 rounded text-white text-sm ${
+                product.isActive ? "bg-green-600" : "bg-gray-400"
+              }`}
+            >
+              {product.isActive ? "Active" : "Inactive"}
+            </button>
+          </td>
+          <td className="px-6 py-4 space-x-2">
+            <button
+              onClick={() => onStartEdit(product)}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(product.id)}
+              className="text-red-600 hover:underline text-sm"
+            >
+              Delete
+            </button>
+          </td>
+        </>
+      )}
+    </tr>
+  );
+}
+
 export function ProductsAdminContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -32,10 +191,18 @@ export function ProductsAdminContent() {
   const [editName, setEditName] = useState("");
   const [editPricingType, setEditPricingType] = useState("");
   const [editPrice, setEditPrice] = useState("");
-  const [draggedId, setDraggedId] = useState<string | null>(null);
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    })
+  );
+
+  const productIds = useMemo(() => products.map((p) => p.id), [products]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -108,34 +275,18 @@ export function ProductsAdminContent() {
     fetchProducts();
   };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedId(id);
-    e.dataTransfer.effectAllowed = "move";
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
+    if (!over || active.id === over.id) return;
 
-  const handleDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId) {
-      setDraggedId(null);
-      return;
-    }
+    const oldIndex = products.findIndex((p) => p.id === active.id);
+    const newIndex = products.findIndex((p) => p.id === over.id);
 
-    const draggedIndex = products.findIndex((p) => p.id === draggedId);
-    const targetIndex = products.findIndex((p) => p.id === targetId);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    const newProducts = [...products];
-    const [draggedProduct] = newProducts.splice(draggedIndex, 1);
-    newProducts.splice(targetIndex, 0, draggedProduct);
-
+    const newProducts = arrayMove(products, oldIndex, newIndex);
     setProducts(newProducts);
-    setDraggedId(null);
 
     for (let i = 0; i < newProducts.length; i++) {
       await fetch("/api/products", {
@@ -236,134 +387,60 @@ export function ProductsAdminContent() {
         )}
 
         {selectedSection && (
-          <>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold w-8">⋮</th>
-                    <th className="px-6 py-3 text-left font-semibold">Name</th>
-                    <th className="px-6 py-3 text-left font-semibold">Type</th>
-                    <th className="px-6 py-3 text-left font-semibold">Price</th>
-                    <th className="px-6 py-3 text-left font-semibold">Active</th>
-                    <th className="px-6 py-3 text-left font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.length === 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={productIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="min-w-full">
+                  <thead className="bg-gray-100 border-b">
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                        No products in this section
-                      </td>
+                      <th className="px-4 py-3 text-left font-semibold w-8">⋮</th>
+                      <th className="px-6 py-3 text-left font-semibold">Name</th>
+                      <th className="px-6 py-3 text-left font-semibold">Type</th>
+                      <th className="px-6 py-3 text-left font-semibold">Price</th>
+                      <th className="px-6 py-3 text-left font-semibold">Active</th>
+                      <th className="px-6 py-3 text-left font-semibold">Actions</th>
                     </tr>
-                  ) : (
-                    products.map((product) => (
-                      <tr
-                        key={product.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, product.id)}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, product.id)}
-                        className={`border-b hover:bg-gray-50 transition ${
-                          draggedId === product.id ? "opacity-50 bg-blue-50" : ""
-                        }`}
-                      >
-                        <td className="px-4 py-4 cursor-grab active:cursor-grabbing text-gray-400">
-                          ⋮⋮
+                  </thead>
+                  <tbody>
+                    {products.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                          No products in this section
                         </td>
-                        {editingId === product.id ? (
-                          <>
-                            <td className="px-6 py-4">
-                              <input
-                                type="text"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                className="border rounded px-3 py-1 w-full"
-                              />
-                            </td>
-                            <td className="px-6 py-4">
-                              <select
-                                value={editPricingType}
-                                onChange={(e) => setEditPricingType(e.target.value)}
-                                className="border rounded px-3 py-1"
-                              >
-                                <option value="PER_SQFT">Per Sqft</option>
-                                <option value="FLAT">Flat Fee</option>
-                              </select>
-                            </td>
-                            <td className="px-6 py-4">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editPrice}
-                                onChange={(e) => setEditPrice(e.target.value)}
-                                className="border rounded px-3 py-1 w-24"
-                              />
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => toggleActive(product.id, product.isActive)}
-                                className={`px-3 py-1 rounded text-white text-sm ${
-                                  product.isActive ? "bg-green-600" : "bg-gray-400"
-                                }`}
-                              >
-                                {product.isActive ? "Active" : "Inactive"}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 space-x-2">
-                              <button
-                                onClick={() => handleSaveEdit(product.id)}
-                                className="text-green-600 hover:underline text-sm font-semibold"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingId(null)}
-                                className="text-gray-600 hover:underline text-sm"
-                              >
-                                Cancel
-                              </button>
-                            </td>
-                          </>
-                        ) : (
-                          <>
-                            <td className="px-6 py-4">{product.name}</td>
-                            <td className="px-6 py-4">{product.pricingType}</td>
-                            <td className="px-6 py-4">${product.price.toFixed(2)}</td>
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => toggleActive(product.id, product.isActive)}
-                                className={`px-3 py-1 rounded text-white text-sm ${
-                                  product.isActive ? "bg-green-600" : "bg-gray-400"
-                                }`}
-                              >
-                                {product.isActive ? "Active" : "Inactive"}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 space-x-2">
-                              <button
-                                onClick={() => startEdit(product)}
-                                className="text-blue-600 hover:underline text-sm"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(product.id)}
-                                className="text-red-600 hover:underline text-sm"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </>
-                        )}
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <p className="text-gray-600 text-sm mt-4">💡 Drag products to reorder them</p>
-          </>
+                    ) : (
+                      products.map((product) => (
+                        <SortableProductRow
+                          key={product.id}
+                          product={product}
+                          editingId={editingId}
+                          editName={editName}
+                          editPricingType={editPricingType}
+                          editPrice={editPrice}
+                          onEditName={setEditName}
+                          onEditPricingType={setEditPricingType}
+                          onEditPrice={setEditPrice}
+                          onSaveEdit={handleSaveEdit}
+                          onCancelEdit={() => setEditingId(null)}
+                          onToggleActive={toggleActive}
+                          onDelete={handleDelete}
+                          onStartEdit={startEdit}
+                        />
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-gray-600 text-sm mt-4">💡 Grip and drag the ⋮⋮ handle to reorder products</p>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
