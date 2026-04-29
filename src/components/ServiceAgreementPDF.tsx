@@ -170,6 +170,7 @@ interface ServiceAgreementPDFProps {
   totalPrice: number;
   installationDate: string;
   signatureDataUrl?: string;
+  contractorSignatureDataUrl?: string;
   date: string;
 }
 
@@ -178,6 +179,7 @@ export default function ServiceAgreementPDF({
   totalPrice,
   installationDate,
   signatureDataUrl,
+  contractorSignatureDataUrl,
   date,
 }: ServiceAgreementPDFProps) {
   return (
@@ -227,7 +229,7 @@ export default function ServiceAgreementPDF({
         <View style={styles.scopeSection}>
           <Text style={styles.scopeTitle}>2. Materials & Workmanship</Text>
           <Text style={styles.scopeText}>
-            All materials used are premium-grade and applied according to manufacturer specifications. Contractor guarantees professional, workmanlike performance with a promise to repair any failures due to improper installation upto, but not beyond, 15 years after the date of installation. The option to purchase a limited warranty for the material covers peeling, delamination, or coating failure under normal residential use.
+            All materials used are premium-grade and applied according to manufacturer specifications. Contractor guarantees professional, workmanlike performance with a promise to repair any failures due to improper installation upto, but not beyond, 15 years after the date of installation. The Contractor will honor the chosen limited warranties for material, covering peeling, delamination, or coating failure under normal residential use.
           </Text>
         </View>
 
@@ -295,8 +297,11 @@ export default function ServiceAgreementPDF({
               <Text style={styles.dateField}>Date: {date}</Text>
             </View>
             <View style={styles.signatureBlock}>
+              {contractorSignatureDataUrl && (
+                <Image src={contractorSignatureDataUrl} style={{ width: '100%', height: 50, marginBottom: 8 }} />
+              )}
               <Text style={styles.signatureLabel}>Contractor Signature</Text>
-              <Text style={styles.dateField}>Date: _______________</Text>
+              <Text style={styles.dateField}>Date: {date}</Text>
             </View>
           </View>
         </View>

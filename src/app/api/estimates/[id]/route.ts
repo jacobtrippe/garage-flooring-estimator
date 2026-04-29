@@ -35,13 +35,14 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { items, totalPrice, status, signatureDataUrl, installationDate, quoteType, exteriorSqft, approvedDiscount } = body;
+    const { items, totalPrice, status, signatureDataUrl, contractorSignatureDataUrl, installationDate, quoteType, exteriorSqft, approvedDiscount } = body;
 
     const updateData: any = {};
 
     if (totalPrice !== undefined) updateData.totalPrice = totalPrice;
     if (status !== undefined) updateData.status = status;
     if (signatureDataUrl !== undefined) updateData.signatureDataUrl = signatureDataUrl;
+    if (contractorSignatureDataUrl !== undefined) updateData.contractorSignatureDataUrl = contractorSignatureDataUrl;
     if (installationDate !== undefined) updateData.installationDate = installationDate;
     if (quoteType !== undefined) updateData.quoteType = quoteType;
     if (exteriorSqft !== undefined) updateData.exteriorSqft = exteriorSqft;
@@ -73,6 +74,10 @@ export async function PUT(
     return NextResponse.json(estimate);
   } catch (error) {
     console.error('PUT /api/estimates/[id] error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      return NextResponse.json({ error: `Failed to update estimate: ${error.message}` }, { status: 500 });
+    }
     return NextResponse.json({ error: 'Failed to update estimate' }, { status: 500 });
   }
 }

@@ -25,20 +25,21 @@ model Customer {
 }
 
 model Estimate {
-  id              String         @id @default(cuid())
-  customerId      String
-  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items           EstimateItem[]
-  totalPrice      Float
-  status          String         @default("draft")
-  quoteType        String         @default("interior")
-  exteriorSqft     Float?
-  approvedDiscount Float          @default(0)
-  signatureDataUrl String?
-  pdfUrl          String?
-  installationDate String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                         String         @id @default(cuid())
+  customerId                 String
+  customer                   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items                      EstimateItem[]
+  totalPrice                 Float
+  status                     String         @default("draft")
+  quoteType                  String         @default("interior")
+  exteriorSqft               Float?
+  approvedDiscount           Float          @default(0)
+  signatureDataUrl           String?
+  contractorSignatureDataUrl String?
+  pdfUrl                     String?
+  installationDate           String?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
 }
 
 model EstimateItem {
