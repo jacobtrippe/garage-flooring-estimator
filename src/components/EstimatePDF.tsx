@@ -162,6 +162,16 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontSize: 11,
   },
+  scopeHeader: {
+    backgroundColor: '#f0f4f8',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    fontWeight: 'bold',
+    fontSize: 10,
+    color: '#1B3A5C',
+    borderBottom: '1px solid #e0e0e0',
+  },
   totalSection: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -289,6 +299,9 @@ interface EstimatePDFProps {
   signatureDataUrl?: string;
   estimateId: string;
   date: string;
+  quoteType?: string;
+  exteriorSqft?: number;
+  itemCategories?: Record<string, string>;
 }
 
 export default function EstimatePDF({
@@ -298,7 +311,17 @@ export default function EstimatePDF({
   signatureDataUrl,
   estimateId,
   date,
+  quoteType = "interior",
+  exteriorSqft,
+  itemCategories,
 }: EstimatePDFProps) {
+  const documentTitle =
+    quoteType === "exterior"
+      ? "Exterior Concrete Sealer Proposal"
+      : quoteType === "both"
+      ? "Floor Coating & Sealer Proposal"
+      : "Garage Floor Proposal";
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -309,7 +332,7 @@ export default function EstimatePDF({
             <Text style={styles.companyName}>PLATINUM INSTALLS</Text>
           </View>
           <View style={styles.headerCenter}>
-            <Text style={styles.estimateTitle}>Garage Floor Proposal</Text>
+            <Text style={styles.estimateTitle}>{documentTitle}</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.estimateNumber}>Proposal #{estimateId.slice(-8).toUpperCase()}</Text>
@@ -347,21 +370,64 @@ export default function EstimatePDF({
         {/* Project Summary */}
         <View style={styles.scopeSection}>
           <Text style={styles.scopeTitle}>Project Summary</Text>
-          <Text style={styles.scopeSubtitle}>
-            This proposal includes a complete garage floor coating system designed for a clean, modern appearance and long-term durability. Designed for homeowners wanting a high-end finish with a professional installation experience from start to finish.
-          </Text>
-          <Text style={styles.scopePackage}>Scope of Service</Text>
-          <Text style={styles.scopeList}>
-            • Professional surface preparation (diamond grinding){'\n'}
-            • Standard crack and joint repair (as needed){'\n'}
-            • Epoxy base coat for adhesion and coverage{'\n'}
-            • Decorative flake broadcast for a premium finish{'\n'}
-            • Polyaspartic top coat for durability, gloss, and stain resistance{'\n'}
-            • Clean edge work and detail finishing
-          </Text>
-          <Text style={styles.scopeCompletion}>
-            Typical Completion Time: Most garages are completed in 1 day, depending on concrete condition and weather.
-          </Text>
+          {quoteType === "exterior" ? (
+            <>
+              <Text style={styles.scopeSubtitle}>
+                This proposal includes professional exterior concrete sealing for driveways, walkways, patios, and surrounding concrete surfaces. Premium-grade sealers provide deep penetrating protection against moisture, freeze-thaw damage, and surface staining.
+              </Text>
+              <Text style={styles.scopePackage}>Scope of Service</Text>
+              <Text style={styles.scopeList}>
+                • Professional surface cleaning and degreasing{'\n'}
+                • Concrete preparation and inspection{'\n'}
+                • Siliconate penetrating sealer application (base protection){'\n'}
+                • Siloxane water-repellent topcoat (hydrophobic layer){'\n'}
+                • Edge and joint detailing{'\n'}
+                • Final inspection and touch-up
+              </Text>
+              <Text style={styles.scopeCompletion}>
+                Typical Completion Time: Most exterior projects are completed in 1 day, depending on weather and surface area.
+              </Text>
+            </>
+          ) : quoteType === "both" ? (
+            <>
+              <Text style={styles.scopeSubtitle}>
+                This proposal covers a complete interior garage floor coating system and exterior concrete sealing for surrounding surfaces, providing a cohesive protective and aesthetic solution for your property.
+              </Text>
+              <Text style={styles.scopePackage}>Interior Scope - Garage Floor Coating</Text>
+              <Text style={styles.scopeList}>
+                • Professional surface preparation (diamond grinding){'\n'}
+                • Epoxy base coat for adhesion and coverage{'\n'}
+                • Polyaspartic top coat for durability and gloss
+              </Text>
+              <Text style={styles.scopePackage}>Exterior Scope - Concrete Sealing</Text>
+              <Text style={styles.scopeList}>
+                • Professional surface cleaning and preparation{'\n'}
+                • Siliconate penetrating sealer application{'\n'}
+                • Siloxane water-repellent topcoat
+              </Text>
+              <Text style={styles.scopeCompletion}>
+                Typical Completion Time: Combined projects are typically completed in 2 days, depending on weather and surface conditions.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.scopeSubtitle}>
+                This proposal includes a complete garage floor coating system designed for a clean, modern appearance and long-term durability. Designed for homeowners wanting a high-end finish with a professional installation experience from start to finish.
+              </Text>
+              <Text style={styles.scopePackage}>Scope of Service</Text>
+              <Text style={styles.scopeList}>
+                • Professional surface preparation (diamond grinding){'\n'}
+                • Standard crack and joint repair (as needed){'\n'}
+                • Epoxy base coat for adhesion and coverage{'\n'}
+                • Decorative flake broadcast for a premium finish{'\n'}
+                • Polyaspartic top coat for durability, gloss, and stain resistance{'\n'}
+                • Clean edge work and detail finishing
+              </Text>
+              <Text style={styles.scopeCompletion}>
+                Typical Completion Time: Most garages are completed in 1 day, depending on concrete condition and weather.
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Items */}
@@ -372,12 +438,39 @@ export default function EstimatePDF({
               <Text style={styles.tableColName}>Description</Text>
               <Text style={styles.tableColPrice}>Amount</Text>
             </View>
-            {items.map((item, idx) => (
-              <View key={item.productId} style={idx % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
-                <Text style={styles.tableColName}>{item.name}</Text>
-                <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
-              </View>
-            ))}
+            {quoteType === "both" ? (
+              <>
+                <View style={styles.scopeHeader}>
+                  <Text>Interior Scope</Text>
+                </View>
+                {items
+                  .filter((i) => (itemCategories?.[i.productId] ?? "interior") !== "exterior")
+                  .map((item, idx) => (
+                    <View key={item.productId} style={idx % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
+                      <Text style={styles.tableColName}>{item.name}</Text>
+                      <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
+                    </View>
+                  ))}
+                <View style={styles.scopeHeader}>
+                  <Text>Exterior Scope</Text>
+                </View>
+                {items
+                  .filter((i) => itemCategories?.[i.productId] === "exterior")
+                  .map((item, idx) => (
+                    <View key={item.productId} style={idx % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
+                      <Text style={styles.tableColName}>{item.name}</Text>
+                      <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
+                    </View>
+                  ))}
+              </>
+            ) : (
+              items.map((item, idx) => (
+                <View key={item.productId} style={idx % 2 === 1 ? [styles.tableRow, styles.tableRowAlt] : styles.tableRow}>
+                  <Text style={styles.tableColName}>{item.name}</Text>
+                  <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
+                </View>
+              ))
+            )}
           </View>
 
           {/* Total */}

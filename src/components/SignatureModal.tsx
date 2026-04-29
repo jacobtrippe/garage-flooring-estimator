@@ -35,6 +35,9 @@ interface SignatureModalProps {
   }>;
   totalPrice: number;
   estimateId: string;
+  quoteType?: string;
+  exteriorSqft?: number;
+  itemCategories?: Record<string, string>;
 }
 
 export default function SignatureModal({
@@ -44,6 +47,9 @@ export default function SignatureModal({
   items,
   totalPrice,
   estimateId,
+  quoteType = "interior",
+  exteriorSqft,
+  itemCategories,
 }: SignatureModalProps) {
   const signaturePadRef = useRef<SignatureCanvas>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
@@ -89,6 +95,9 @@ export default function SignatureModal({
           signatureDataUrl={undefined}
           estimateId={estimateId}
           date={today}
+          quoteType={quoteType}
+          exteriorSqft={exteriorSqft}
+          itemCategories={itemCategories}
         />
       );
 
@@ -187,6 +196,9 @@ export default function SignatureModal({
           signatureDataUrl={sig}
           estimateId={estimateId}
           date={today}
+          quoteType={quoteType}
+          exteriorSqft={exteriorSqft}
+          itemCategories={itemCategories}
         />
       );
 
@@ -409,6 +421,9 @@ export default function SignatureModal({
                     signatureDataUrl={signatureDataUrl || undefined}
                     estimateId={estimateId}
                     date={today}
+                    quoteType={quoteType}
+                    exteriorSqft={exteriorSqft}
+                    itemCategories={itemCategories}
                   />
                 ) : (
                   <ServiceAgreementPDF

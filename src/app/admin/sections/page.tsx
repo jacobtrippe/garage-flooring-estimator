@@ -26,13 +26,16 @@ interface Section {
   id: string;
   title: string;
   displayOrder: number;
+  category: string;
 }
 
 function SortableSectionRow({
   section,
   editingId,
   editTitle,
+  editCategory,
   onEditTitle,
+  onEditCategory,
   onSaveEdit,
   onCancelEdit,
   onStartEdit,
@@ -41,7 +44,9 @@ function SortableSectionRow({
   section: Section;
   editingId: string | null;
   editTitle: string;
+  editCategory: string;
   onEditTitle: (val: string) => void;
+  onEditCategory: (val: string) => void;
   onSaveEdit: (id: string) => void;
   onCancelEdit: () => void;
   onStartEdit: (section: Section) => void;
@@ -82,6 +87,17 @@ function SortableSectionRow({
               className="border rounded px-3 py-1 w-full"
             />
           </td>
+          <td className="px-6 py-4">
+            <select
+              value={editCategory}
+              onChange={(e) => onEditCategory(e.target.value)}
+              className="border rounded px-3 py-1"
+            >
+              <option value="interior">Interior</option>
+              <option value="exterior">Exterior</option>
+              <option value="both">Both</option>
+            </select>
+          </td>
           <td className="px-6 py-4 space-x-2">
             <button
               onClick={() => onSaveEdit(section.id)}
@@ -102,6 +118,11 @@ function SortableSectionRow({
       ) : (
         <>
           <td className="px-6 py-4">{section.title}</td>
+          <td className="px-6 py-4">
+            <span className="text-sm px-2 py-1 rounded-full" style={{ backgroundColor: '#f0f4f8', color: '#1B3A5C' }}>
+              {section.category.charAt(0).toUpperCase() + section.category.slice(1)}
+            </span>
+          </td>
           <td className="px-6 py-4 space-x-4">
             <button
               onClick={() => onStartEdit(section)}
@@ -134,9 +155,11 @@ function SortableSectionRow({
 export default function SectionsAdmin() {
   const [sections, setSections] = useState<Section[]>([]);
   const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("interior");
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
   const { status } = useSession();
   const router = useRouter();
 
@@ -171,23 +194,25 @@ export default function SectionsAdmin() {
     await fetch("/api/sections", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, category }),
     });
 
     setTitle("");
+    setCategory("interior");
     fetchSections();
   };
 
   const startEdit = (section: Section) => {
     setEditingId(section.id);
     setEditTitle(section.title);
+    setEditCategory(section.category);
   };
 
   const handleSaveEdit = async (id: string) => {
     await fetch(`/api/sections/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: editTitle }),
+      body: JSON.stringify({ title: editTitle, category: editCategory }),
     });
     setEditingId(null);
     fetchSections();
@@ -244,6 +269,15 @@ export default function SectionsAdmin() {
               className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:outline-none"
               style={{ '--tw-ring-color': '#1B3A5C' } as any}
             />
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="border border-gray-300 rounded-md px-4 py-2"
+            >
+              <option value="interior">Interior</option>
+              <option value="exterior">Exterior</option>
+              <option value="both">Both</option>
+            </select>
             <button
               type="submit"
               className="text-white px-6 py-2 rounded-md font-medium hover:opacity-90 transition"
@@ -269,13 +303,14 @@ export default function SectionsAdmin() {
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold w-8" style={{ color: '#2f2f30' }}>⋮</th>
                     <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Section Name</th>
+                    <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Category</th>
                     <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sections.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
                         No sections yet
                       </td>
                     </tr>
@@ -286,7 +321,9 @@ export default function SectionsAdmin() {
                         section={section}
                         editingId={editingId}
                         editTitle={editTitle}
+                        editCategory={editCategory}
                         onEditTitle={setEditTitle}
+                        onEditCategory={setEditCategory}
                         onSaveEdit={handleSaveEdit}
                         onCancelEdit={() => setEditingId(null)}
                         onStartEdit={startEdit}

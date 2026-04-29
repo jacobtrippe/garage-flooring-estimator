@@ -108,16 +108,22 @@ function SortableProductRow({
             >
               <option value="PER_SQFT">Per Sqft</option>
               <option value="FLAT">Flat Fee</option>
+              <option value="PERCENT">Percentage (%)</option>
             </select>
           </td>
           <td className="px-6 py-4">
-            <input
-              type="number"
-              step="0.01"
-              value={editPrice}
-              onChange={(e) => onEditPrice(e.target.value)}
-              className="border rounded px-3 py-1 w-24"
-            />
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">
+                {editPricingType === "PERCENT" ? "% (e.g. -5)" : "Price"}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={editPrice}
+                onChange={(e) => onEditPrice(e.target.value)}
+                className="border rounded px-3 py-1 w-24"
+              />
+            </div>
           </td>
           <td className="px-6 py-4">
             <button
@@ -365,16 +371,22 @@ export function ProductsAdminContent() {
                 >
                   <option value="PER_SQFT">Per Sqft</option>
                   <option value="FLAT">Flat Fee</option>
+                  <option value="PERCENT">Percentage (%)</option>
                 </select>
-                <input
-                  type="number"
-                  placeholder="Price"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  className="border rounded px-4 py-2"
-                  required
-                />
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">
+                    {pricingType === "PERCENT" ? "Percentage (e.g. -5 for 5% off)" : "Price"}
+                  </label>
+                  <input
+                    type="number"
+                    placeholder={pricingType === "PERCENT" ? "-5" : "0.00"}
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    className="border rounded px-4 py-2 w-full"
+                    required
+                  />
+                </div>
               </div>
               <button
                 type="submit"

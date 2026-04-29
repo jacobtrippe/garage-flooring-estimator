@@ -31,6 +31,9 @@ model Estimate {
   items           EstimateItem[]
   totalPrice      Float
   status          String         @default("draft")
+  quoteType        String         @default("interior")
+  exteriorSqft     Float?
+  approvedDiscount Float          @default(0)
   signatureDataUrl String?
   pdfUrl          String?
   installationDate String?
@@ -52,6 +55,7 @@ model Section {
   id           String    @id @default(cuid())
   title        String
   displayOrder Int
+  category     String    @default("interior")
   products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

@@ -36,6 +36,7 @@ interface Section {
   id: string;
   title: string;
   displayOrder: number;
+  category: string;
   products: Product[];
 }
 
@@ -61,7 +62,12 @@ interface Estimate {
   items: EstimateItem[];
   totalPrice: number;
   status: string;
+  quoteType: string;
+  exteriorSqft: number | null;
+  approvedDiscount: number;
 }
+
+type QuoteType = "interior" | "exterior" | "both";
 
 export default function EstimateEditor() {
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -73,6 +79,9 @@ export default function EstimateEditor() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [editForm, setEditForm] = useState<Customer | null>(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [quoteType, setQuoteType] = useState<QuoteType>("interior");
+  const [exteriorSqft, setExteriorSqft] = useState<number>(0);
+  const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
   const { status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -89,6 +98,26 @@ export default function EstimateEditor() {
     }
   }, [estimateId]);
 
+  const filteredSections = sections.filter((section) => {
+    if (quoteType === "interior") return section.category === "interior" || section.category === "both";
+    if (quoteType === "exterior") return section.category === "exterior" || section.category === "both";
+    return true;
+  });
+
+  useEffect(() => {
+    const visibleSectionIds = new Set(filteredSections.map((s) => s.id));
+    setSelectedItems((prev) =>
+      prev.filter((item) => {
+        const product = sections.flatMap((s) => s.products).find((p) => p.id === item.productId);
+        return product ? visibleSectionIds.has(product.sectionId) : false;
+      })
+    );
+  }, [quoteType]);
+
+  useEffect(() => {
+    setSelectedItems((prev) => recalculateItems(prev));
+  }, [exteriorSqft, sections]);
+
   const fetchEstimate = async () => {
     try {
       const res = await fetch(`/api/estimates/${estimateId}`);
@@ -98,6 +127,10 @@ export default function EstimateEditor() {
         return;
       }
       const estimate: Estimate = await res.json();
+
+      setQuoteType((estimate.quoteType as QuoteType) || "interior");
+      setExteriorSqft(estimate.exteriorSqft ?? 0);
+      setApprovedDiscount(estimate.approvedDiscount ?? 0);
 
       const res2 = await fetch(`/api/customers/${estimate.customerId}`);
       if (!res2.ok) {
@@ -111,7 +144,7 @@ export default function EstimateEditor() {
       const selected = estimate.items.map((item) => ({
         productId: item.productId,
         name: item.name,
-        pricingType: "FLAT",
+        pricingType: "FLAT", // Will be updated when sections load
         unitPrice: item.price,
         quantity: 1,
         totalPrice: item.price,
@@ -178,6 +211,20 @@ export default function EstimateEditor() {
       const updated = await res.json();
       setCustomer(updated);
       setEditingCustomer(false);
+
+      // Auto-save estimate with current exteriorSqft, quoteType, and approvedDiscount
+      if (estimateId) {
+        await fetch(`/api/estimates/${estimateId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            quoteType,
+            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
+            approvedDiscount,
+          }),
+        });
+      }
+
       setSavingCustomer(false);
     } catch (error) {
       console.error("Error updating customer:", error);
@@ -196,9 +243,47 @@ export default function EstimateEditor() {
   const calculatePrice = (product: Product): number => {
     if (!customer) return 0;
     if (product.pricingType === "PER_SQFT") {
-      return product.price * customer.garageSqft;
+      let sqft: number;
+      if (quoteType === "exterior") {
+        sqft = exteriorSqft;
+      } else if (quoteType === "interior") {
+        sqft = customer.garageSqft;
+      } else {
+        // combined: exterior sections use exteriorSqft, everything else uses garageSqft
+        const section = sections.find((s) => s.id === product.sectionId);
+        sqft = section?.category === "exterior" ? exteriorSqft : customer.garageSqft;
+      }
+      return product.price * sqft;
     }
     return product.price;
+  };
+
+  const recalculateItems = (items: SelectedItem[]): SelectedItem[] => {
+    const allProducts = sections.flatMap((s) => s.products);
+
+    // Pass 1: price non-PERCENT items (update pricingType from product)
+    const pass1 = items.map((item) => {
+      const product = allProducts.find((p) => p.id === item.productId);
+      if (!product) return item;
+
+      const correctedItem = { ...item, pricingType: product.pricingType };
+      if (product.pricingType === "PERCENT") return correctedItem;
+
+      return { ...correctedItem, totalPrice: calculatePrice(product) };
+    });
+
+    // Compute base subtotal (sum of non-PERCENT items)
+    const baseSubtotal = pass1
+      .filter((i) => i.pricingType !== "PERCENT")
+      .reduce((sum, i) => sum + i.totalPrice, 0);
+
+    // Pass 2: apply PERCENT items
+    return pass1.map((item) => {
+      if (item.pricingType !== "PERCENT") return item;
+      const product = allProducts.find((p) => p.id === item.productId);
+      if (!product) return item;
+      return { ...item, totalPrice: baseSubtotal * (product.price / 100) };
+    });
   };
 
   const handleProductToggle = (product: Product) => {
@@ -207,7 +292,9 @@ export default function EstimateEditor() {
     const isDiscountSection = productSection?.title === "Discounts";
 
     if (existingItem) {
-      setSelectedItems(selectedItems.filter((item) => item.productId !== product.id));
+      // Deselect if already selected
+      const newItems = selectedItems.filter((item) => item.productId !== product.id);
+      setSelectedItems(recalculateItems(newItems));
     } else {
       let newItems = [...selectedItems];
 
@@ -228,22 +315,22 @@ export default function EstimateEditor() {
       // For discount section, allow multiple selections - just add without removing
 
       // Add the new product
-      const itemPrice = calculatePrice(product);
       newItems.push({
         productId: product.id,
         name: product.name,
         pricingType: product.pricingType,
         unitPrice: product.price,
         quantity: 1,
-        totalPrice: itemPrice,
+        totalPrice: 0, // Will be set by recalculateItems
       });
 
-      setSelectedItems(newItems);
+      setSelectedItems(recalculateItems(newItems));
     }
   };
 
   const getTotalPrice = (): number => {
-    return selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const itemsTotal = selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    return itemsTotal - approvedDiscount;
   };
 
   const isProductSelected = (productId: string): boolean => {
@@ -269,6 +356,9 @@ export default function EstimateEditor() {
           items,
           totalPrice,
           status: "draft",
+          quoteType,
+          exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
+          approvedDiscount,
         }),
       });
 
@@ -338,6 +428,12 @@ export default function EstimateEditor() {
                     <p className="font-semibold text-gray-700">Car Ports</p>
                     <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{customer.carPorts}</p>
                   </div>
+                  {(quoteType === "exterior" || quoteType === "both") && (
+                    <div className="pt-4 border-t">
+                      <p className="font-semibold text-gray-700">Exterior Area</p>
+                      <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{exteriorSqft} sqft</p>
+                    </div>
+                  )}
                   {customer.notes && (
                     <div className="pt-4 border-t">
                       <p className="font-semibold text-gray-700">Notes</p>
@@ -430,6 +526,17 @@ export default function EstimateEditor() {
                       className="w-full border rounded px-2 py-1"
                     />
                   </div>
+                  {(quoteType === "exterior" || quoteType === "both") && (
+                    <div>
+                      <label className="font-semibold text-gray-700 block mb-1">Exterior Area (sqft)</label>
+                      <input
+                        type="number"
+                        value={exteriorSqft || ""}
+                        onChange={(e) => setExteriorSqft(parseFloat(e.target.value) || 0)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="font-semibold text-gray-700 block mb-1">Notes</label>
                     <textarea
@@ -453,9 +560,25 @@ export default function EstimateEditor() {
 
           {/* Middle: Products */}
           <div className="col-span-1">
+            <div className="mb-6 flex gap-2 justify-center">
+              {(["interior", "exterior", "both"] as QuoteType[]).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setQuoteType(type)}
+                  className={`px-4 py-2 rounded-md font-semibold transition capitalize ${
+                    quoteType === type
+                      ? "text-white"
+                      : "bg-white border border-gray-300 text-gray-700 hover:border-gray-400"
+                  }`}
+                  style={quoteType === type ? { backgroundColor: '#1B3A5C' } : {}}
+                >
+                  {type === "both" ? "Interior + Exterior" : type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
             <h2 className="text-2xl font-bold mb-6" style={{ color: '#2f2f30' }}>Available Products</h2>
             <div className="space-y-6">
-              {sections.map((section) => (
+              {filteredSections.map((section) => (
                 <div key={section.id} className="bg-white rounded-lg shadow-sm p-6">
                   <h3 className="text-lg font-bold mb-4 pb-3 border-b-2" style={{ color: '#1B3A5C', borderColor: '#1B3A5C' }}>{section.title}</h3>
                   <div className="space-y-3">
@@ -542,6 +665,22 @@ export default function EstimateEditor() {
                     <span className="text-2xl font-bold" style={{ color: '#1B3A5C' }}>${getTotalPrice().toFixed(2)}</span>
                   </div>
 
+                  <div className="border-t pt-3 mt-3">
+                    <label className="font-semibold text-gray-700 block mb-2">Approved Discount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={approvedDiscount}
+                      onChange={(e) => setApprovedDiscount(parseFloat(e.target.value) || 0)}
+                      className="w-full border-2 rounded px-3 py-2 text-gray-900"
+                      placeholder="Enter discount amount"
+                    />
+                    {approvedDiscount > 0 && (
+                      <p className="text-sm text-green-700 font-medium mt-1">-${approvedDiscount.toFixed(2)}</p>
+                    )}
+                  </div>
+
                   <button
                     onClick={handleSaveDraft}
                     disabled={saving}
@@ -581,6 +720,14 @@ export default function EstimateEditor() {
           items={selectedItems}
           totalPrice={getTotalPrice()}
           estimateId={estimateId}
+          quoteType={quoteType}
+          exteriorSqft={exteriorSqft}
+          itemCategories={Object.fromEntries(
+            selectedItems.map((item) => {
+              const section = sections.find((s) => s.products.some((p) => p.id === item.productId));
+              return [item.productId, section?.category || "interior"];
+            })
+          )}
         />
       )}
     </div>
