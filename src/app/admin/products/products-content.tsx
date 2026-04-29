@@ -316,6 +316,10 @@ export function ProductsAdminContent() {
   };
 
   const handleDelete = async (id: string) => {
+    const product = products.find((p) => p.id === id);
+    if (!confirm(`Delete product "${product?.name}"? This action cannot be undone.`)) {
+      return;
+    }
     await fetch(`/api/products?id=${id}`, { method: "DELETE" });
     fetchProducts();
   };

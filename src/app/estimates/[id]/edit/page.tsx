@@ -638,11 +638,13 @@ export default function EstimateEditor() {
                       <div className="flex justify-between items-start mb-1">
                         <p className="font-semibold text-gray-900">{item.name}</p>
                         <button
-                          onClick={() =>
-                            setSelectedItems(
-                              selectedItems.filter((i) => i.productId !== item.productId)
-                            )
-                          }
+                          onClick={() => {
+                            if (confirm(`Remove ${item.name} from estimate?`)) {
+                              setSelectedItems(
+                                selectedItems.filter((i) => i.productId !== item.productId)
+                              );
+                            }
+                          }}
                           className="text-red-600 hover:text-red-800 text-sm"
                         >
                           ✕

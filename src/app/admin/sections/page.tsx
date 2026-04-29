@@ -219,6 +219,10 @@ export default function SectionsAdmin() {
   };
 
   const handleDelete = async (id: string) => {
+    const section = sections.find((s) => s.id === id);
+    if (!confirm(`Delete section "${section?.title}"? This action cannot be undone.`)) {
+      return;
+    }
     await fetch(`/api/sections/${id}`, { method: "DELETE" });
     fetchSections();
   };
