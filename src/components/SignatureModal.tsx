@@ -62,10 +62,16 @@ export default function SignatureModal({
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(preSignedSignatureDataUrl || null);
   const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [dateInput, setDateInput] = useState<string>(installationDate);
+  const [dateInput, setDateInput] = useState<string>(installationDate || '');
   const [step, setStep] = useState<'date' | 'customer-sign' | 'contractor-sign'>(preSignedSignatureDataUrl ? 'contractor-sign' : 'date');
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
+
+  useEffect(() => {
+    if (installationDate && !dateInput) {
+      setDateInput(installationDate);
+    }
+  }, [installationDate, dateInput]);
 
   if (!isOpen) return null;
 
