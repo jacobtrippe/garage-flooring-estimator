@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sign Agreement - Garage Flooring Estimator",
-  description: "Sign your service agreement",
+  title: "Platinum Installs — Your Service Agreement",
+  description: "Review and sign your service agreement with Platinum Installs.",
 };
 
 export default function SignLayout({

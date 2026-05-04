@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-function generateToken(): string {
-  return 'sig_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+function generateToken(customerName: string): string {
+  const slug = slugify(customerName);
+  const random = Math.random().toString(36).substring(2, 12);
+  return `${slug}-${random}`;
 }
 
 export async function POST(
@@ -27,7 +39,7 @@ export async function POST(
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    const token = generateToken();
+    const token = generateToken(estimate.customer.name);
     const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     await prisma.estimate.update({
