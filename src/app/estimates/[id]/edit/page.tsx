@@ -65,6 +65,7 @@ interface Estimate {
   quoteType: string;
   exteriorSqft: number | null;
   approvedDiscount: number;
+  signatureDataUrl?: string;
 }
 
 type QuoteType = "interior" | "exterior" | "both";
@@ -79,6 +80,11 @@ export default function EstimateEditor() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [editForm, setEditForm] = useState<Customer | null>(null);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [showRemoteSignModal, setShowRemoteSignModal] = useState(false);
+  const [sendingRemoteSign, setSendingRemoteSign] = useState(false);
+  const [remoteSignInstallationDate, setRemoteSignInstallationDate] = useState<string>('');
+  const [remoteSigningUrl, setRemoteSigningUrl] = useState<string>('');
+  const [preSignedSignatureDataUrl, setPreSignedSignatureDataUrl] = useState<string | undefined>();
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
@@ -131,6 +137,9 @@ export default function EstimateEditor() {
       setQuoteType((estimate.quoteType as QuoteType) || "interior");
       setExteriorSqft(estimate.exteriorSqft ?? 0);
       setApprovedDiscount(estimate.approvedDiscount ?? 0);
+      if (estimate.signatureDataUrl) {
+        setPreSignedSignatureDataUrl(estimate.signatureDataUrl);
+      }
 
       const res2 = await fetch(`/api/customers/${estimate.customerId}`);
       if (!res2.ok) {
@@ -238,6 +247,58 @@ export default function EstimateEditor() {
       return;
     }
     setShowSignatureModal(true);
+  };
+
+  const handleSendRemoteSignature = async () => {
+    if (!customer) {
+      alert("Customer not found");
+      return;
+    }
+
+    if (!remoteSignInstallationDate) {
+      alert("Please select an installation date");
+      return;
+    }
+
+    setSendingRemoteSign(true);
+    try {
+      // First, save the installation date to the estimate
+      const updateRes = await fetch(`/api/estimates/${estimateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          installationDate: remoteSignInstallationDate,
+        }),
+      });
+
+      if (!updateRes.ok) {
+        throw new Error("Failed to save installation date");
+      }
+
+      // Then generate the signing link
+      const res = await fetch(`/api/estimates/${estimateId}/send-signature`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerEmail: customer.email,
+          customerName: customer.name,
+          installationDate: remoteSignInstallationDate,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate signing link");
+      }
+
+      const data = await res.json();
+      setRemoteSigningUrl(data.signingUrl);
+      setShowRemoteSignModal(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to send signing link");
+    } finally {
+      setSendingRemoteSign(false);
+    }
   };
 
   const calculatePrice = (product: Product): number => {
@@ -404,7 +465,14 @@ export default function EstimateEditor() {
                 <div className="space-y-3 text-sm">
                   <div>
                     <p className="font-semibold text-gray-700">Name</p>
-                    <p className="text-gray-900">{customer.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-900">{customer.name}</p>
+                      {preSignedSignatureDataUrl && (
+                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">
+                          <span>✓</span> Signed
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-700">Email</p>
@@ -699,6 +767,14 @@ export default function EstimateEditor() {
                   >
                     Generate PDF & Sign
                   </button>
+
+                  <button
+                    onClick={() => setShowRemoteSignModal(true)}
+                    className="w-full text-white py-3 rounded-md font-semibold hover:opacity-90 transition"
+                    style={{ backgroundColor: '#059669' }}
+                  >
+                    Send for Remote Signature
+                  </button>
                 </div>
               )}
 
@@ -730,7 +806,124 @@ export default function EstimateEditor() {
               return [item.productId, section?.category || "interior"];
             })
           )}
+          preSignedSignatureDataUrl={preSignedSignatureDataUrl}
+          approvedDiscount={approvedDiscount}
         />
+      )}
+
+      {remoteSigningUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">✓ Signing Link Ready</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700">
+                The signing link has been generated for <strong>{customer.name}</strong>. Share this link via email, text, or however you prefer.
+              </p>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-xs text-gray-600 mb-2 font-semibold">SIGNING LINK (expires in 14 days):</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={remoteSigningUrl}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm font-mono text-gray-900 bg-white"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(remoteSigningUrl);
+                      alert('Link copied to clipboard!');
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 whitespace-nowrap"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700">
+                <p className="font-semibold mb-2">Next steps:</p>
+                <ul className="space-y-1 text-xs list-disc list-inside">
+                  <li>Send the link to {customer.email}</li>
+                  <li>They can sign from any device</li>
+                  <li>You'll get an SMS when they sign</li>
+                  <li>Then complete the process by signing from the app</li>
+                </ul>
+              </div>
+
+              <button
+                onClick={() => {
+                  setRemoteSigningUrl('');
+                  setRemoteSignInstallationDate('');
+                }}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRemoteSignModal && customer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Send for Remote Signature</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700">
+                A signing link will be sent to <strong>{customer.email}</strong> so they can review and sign the agreement remotely on any device.
+              </p>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Installation Date *</label>
+                <input
+                  type="date"
+                  value={remoteSignInstallationDate}
+                  onChange={(e) => setRemoteSignInstallationDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <p className="text-xs text-gray-500 mt-1">This date will be filled in on the agreement PDF</p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-700">
+                <p className="font-semibold mb-2">What happens:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Customer receives an email with a secure link</li>
+                  <li>They open it on any device and review the agreement</li>
+                  <li>They draw their signature and submit</li>
+                  <li>You'll get an SMS notification when they sign</li>
+                  <li>Then you can sign from the app to complete it</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowRemoteSignModal(false);
+                    setRemoteSignInstallationDate('');
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendRemoteSignature}
+                  disabled={sendingRemoteSign || !remoteSignInstallationDate}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {sendingRemoteSign ? "Sending..." : "Send Link"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

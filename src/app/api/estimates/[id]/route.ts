@@ -7,13 +7,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const byToken = request.nextUrl.searchParams.get('byToken') === 'true';
 
     const estimate = await prisma.estimate.findUnique({
-      where: { id },
+      where: byToken ? { signatureToken: id } : { id },
       include: {
         items: {
           select: { id: true, productId: true, name: true, price: true },
         },
+        customer: true,
       },
     });
 
@@ -21,7 +23,11 @@ export async function GET(
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    return NextResponse.json(estimate);
+    if (byToken && estimate.signatureTokenExpiresAt && new Date(estimate.signatureTokenExpiresAt) < new Date()) {
+      return NextResponse.json({ error: 'Signing link has expired' }, { status: 410 });
+    }
+
+    return byToken ? NextResponse.json({ estimate }) : NextResponse.json(estimate);
   } catch (error) {
     console.error('GET /api/estimates/[id] error:', error);
     return NextResponse.json({ error: 'Failed to fetch estimate' }, { status: 500 });

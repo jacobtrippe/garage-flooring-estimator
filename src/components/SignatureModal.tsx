@@ -38,6 +38,8 @@ interface SignatureModalProps {
   quoteType?: string;
   exteriorSqft?: number;
   itemCategories?: Record<string, string>;
+  preSignedSignatureDataUrl?: string;
+  approvedDiscount?: number;
 }
 
 export default function SignatureModal({
@@ -50,14 +52,16 @@ export default function SignatureModal({
   quoteType = "interior",
   exteriorSqft,
   itemCategories,
+  preSignedSignatureDataUrl,
+  approvedDiscount = 0,
 }: SignatureModalProps) {
   const customerSignaturePadRef = useRef<SignatureCanvas>(null);
   const contractorSignaturePadRef = useRef<SignatureCanvas>(null);
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(preSignedSignatureDataUrl || null);
   const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [installationDate, setInstallationDate] = useState<string>('');
-  const [step, setStep] = useState<'date' | 'customer-sign' | 'contractor-sign'>('date');
+  const [step, setStep] = useState<'date' | 'customer-sign' | 'contractor-sign'>(preSignedSignatureDataUrl ? 'contractor-sign' : 'date');
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
 
@@ -100,6 +104,7 @@ export default function SignatureModal({
           quoteType={quoteType}
           exteriorSqft={exteriorSqft}
           itemCategories={itemCategories}
+          approvedDiscount={approvedDiscount}
         />
       );
 
@@ -108,6 +113,7 @@ export default function SignatureModal({
       // Upload PDF to Supabase Storage
       const estimateFormData = new FormData();
       estimateFormData.append('file', estimatePdfBlob, `Estimate-${estimateId.slice(-8)}.pdf`);
+      estimateFormData.append('type', 'estimate');
 
       const uploadEstimateRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
         method: 'POST',
@@ -223,6 +229,7 @@ export default function SignatureModal({
           quoteType={quoteType}
           exteriorSqft={exteriorSqft}
           itemCategories={itemCategories}
+          approvedDiscount={approvedDiscount}
         />
       );
 
@@ -245,6 +252,7 @@ export default function SignatureModal({
       // Upload both PDFs to Supabase Storage
       const estimateFormData = new FormData();
       estimateFormData.append('file', estimatePdfBlob, `Estimate-${estimateId.slice(-8)}.pdf`);
+      estimateFormData.append('type', 'estimate');
 
       const uploadEstimateRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
         method: 'POST',
@@ -260,6 +268,7 @@ export default function SignatureModal({
 
       const agreementFormData = new FormData();
       agreementFormData.append('file', agreementPdfBlob, `ServiceAgreement-${estimateId.slice(-8)}.pdf`);
+      agreementFormData.append('type', 'agreement');
 
       const uploadAgreementRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
         method: 'POST',
@@ -450,6 +459,7 @@ export default function SignatureModal({
                       quoteType={quoteType}
                       exteriorSqft={exteriorSqft}
                       itemCategories={itemCategories}
+                      approvedDiscount={approvedDiscount}
                     />
                   ) : (
                     <ServiceAgreementPDF
@@ -528,7 +538,10 @@ export default function SignatureModal({
         <div className="bg-white rounded-lg shadow-lg w-screen h-screen flex flex-col">
           {/* Header */}
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center shrink-0">
-            <h2 className="text-2xl font-bold">Contractor Signature</h2>
+            <div>
+              <h2 className="text-2xl font-bold">Contractor Signature</h2>
+              {preSignedSignatureDataUrl && <p className="text-sm text-green-200 mt-1">✓ Customer signed remotely on {installationDate ? new Date(installationDate).toLocaleDateString() : 'agreement date'}</p>}
+            </div>
             <button
               onClick={handleClose}
               className="text-gray-300 hover:text-white text-3xl"

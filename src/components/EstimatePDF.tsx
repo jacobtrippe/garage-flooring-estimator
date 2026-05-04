@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 
@@ -302,6 +300,7 @@ interface EstimatePDFProps {
   quoteType?: string;
   exteriorSqft?: number;
   itemCategories?: Record<string, string>;
+  approvedDiscount?: number;
 }
 
 export default function EstimatePDF({
@@ -314,6 +313,7 @@ export default function EstimatePDF({
   quoteType = "interior",
   exteriorSqft,
   itemCategories,
+  approvedDiscount = 0,
 }: EstimatePDFProps) {
   const documentTitle =
     quoteType === "exterior"
@@ -470,6 +470,12 @@ export default function EstimatePDF({
                   <Text style={styles.tableColPrice}>{item.totalPrice !== 0 ? `${item.totalPrice < 0 ? '-$' : '$'}${Math.abs(item.totalPrice).toFixed(2)}` : ''}</Text>
                 </View>
               ))
+            )}
+            {approvedDiscount > 0 && (
+              <View style={styles.tableRow}>
+                <Text style={styles.tableColName}>Discounts Added</Text>
+                <Text style={[styles.tableColPrice, { color: '#10b981' }]}>-${approvedDiscount.toFixed(2)}</Text>
+              </View>
             )}
           </View>
 

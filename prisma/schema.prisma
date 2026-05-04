@@ -37,7 +37,12 @@ model Estimate {
   signatureDataUrl           String?
   contractorSignatureDataUrl String?
   pdfUrl                     String?
+  estimatePdfUrl             String?
+  agreementPdfUrl            String?
   installationDate           String?
+  signatureToken             String?        @unique
+  signatureTokenExpiresAt    DateTime?
+  customerSignedAt           DateTime?
   createdAt                  DateTime       @default(now())
   updatedAt                  DateTime       @updatedAt
 }

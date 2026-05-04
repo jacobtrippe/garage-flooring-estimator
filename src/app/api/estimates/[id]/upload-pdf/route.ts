@@ -24,6 +24,7 @@ export async function POST(
     const { id } = await params;
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const pdfType = (formData.get('type') as string) || 'estimate';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -38,7 +39,8 @@ export async function POST(
     }
 
     const buffer = await file.arrayBuffer();
-    const fileName = `Estimate-${id.slice(-8)}.pdf`;
+    const filePrefix = pdfType === 'agreement' ? 'Agreement' : 'Estimate';
+    const fileName = `${filePrefix}-${id.slice(-8)}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from('estimates')
@@ -61,9 +63,17 @@ export async function POST(
 
     const pdfUrl = publicUrlData?.publicUrl;
 
+    const updateData: any = {};
+    if (pdfType === 'agreement') {
+      updateData.agreementPdfUrl = pdfUrl;
+    } else {
+      updateData.estimatePdfUrl = pdfUrl;
+    }
+    updateData.pdfUrl = pdfUrl;
+
     await prisma.estimate.update({
       where: { id },
-      data: { pdfUrl },
+      data: updateData,
     });
 
     return NextResponse.json({

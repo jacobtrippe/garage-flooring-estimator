@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 
@@ -168,7 +166,7 @@ interface ServiceAgreementPDFProps {
     email: string;
   };
   totalPrice: number;
-  installationDate: string;
+  installationDate?: string;
   signatureDataUrl?: string;
   contractorSignatureDataUrl?: string;
   date: string;
@@ -177,11 +175,25 @@ interface ServiceAgreementPDFProps {
 export default function ServiceAgreementPDF({
   customer,
   totalPrice,
-  installationDate,
+  installationDate = 'TBD',
   signatureDataUrl,
   contractorSignatureDataUrl,
   date,
 }: ServiceAgreementPDFProps) {
+  const formatDate = (dateStr: string) => {
+    if (!dateStr || dateStr === 'TBD') return 'TBD';
+    try {
+      const date = new Date(dateStr + 'T00:00:00');
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -212,8 +224,8 @@ export default function ServiceAgreementPDF({
             <Text style={styles.value}>{customer.phone} / {customer.email}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Date:</Text>
-            <Text style={styles.value}>{installationDate}</Text>
+            <Text style={styles.label}>Scheduled Installation Date:</Text>
+            <Text style={styles.value}>{formatDate(installationDate)}</Text>
           </View>
         </View>
 
