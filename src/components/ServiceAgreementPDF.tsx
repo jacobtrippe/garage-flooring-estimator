@@ -175,13 +175,13 @@ interface ServiceAgreementPDFProps {
 export default function ServiceAgreementPDF({
   customer,
   totalPrice,
-  installationDate = 'TBD',
+  installationDate,
   signatureDataUrl,
   contractorSignatureDataUrl,
   date,
 }: ServiceAgreementPDFProps) {
-  const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === 'TBD') return 'TBD';
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return '';
     try {
       const date = new Date(dateStr + 'T00:00:00');
       return date.toLocaleDateString('en-US', {
