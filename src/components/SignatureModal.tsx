@@ -473,7 +473,7 @@ export default function SignatureModal({
                     <ServiceAgreementPDF
                       customer={customer}
                       totalPrice={totalPrice}
-                      installationDate={installationDate}
+                      installationDate={dateInput}
                       signatureDataUrl={signatureDataUrl || undefined}
                       date={today}
                     />
@@ -581,7 +581,7 @@ export default function SignatureModal({
                   <ServiceAgreementPDF
                     customer={customer}
                     totalPrice={totalPrice}
-                    installationDate={installationDate}
+                    installationDate={dateInput}
                     signatureDataUrl={signatureDataUrl || undefined}
                     date={today}
                   />
