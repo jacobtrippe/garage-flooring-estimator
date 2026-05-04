@@ -217,6 +217,11 @@ export default function SignatureModal({
         return;
       }
 
+      // Fetch the updated estimate to ensure we have the correct installation date
+      const fetchRes = await fetch(`/api/estimates/${estimateId}`);
+      const { estimate: updatedEstimate } = await fetchRes.json();
+      const savedInstallationDate = updatedEstimate?.installationDate || installationDate;
+
       // Generate Estimate PDF with customer signature
       const estimatePdf = pdf(
         <EstimatePDF
@@ -240,7 +245,7 @@ export default function SignatureModal({
         <ServiceAgreementPDF
           customer={customer}
           totalPrice={totalPrice}
-          installationDate={installationDate}
+          installationDate={savedInstallationDate}
           signatureDataUrl={signatureDataUrl || undefined}
           contractorSignatureDataUrl={contractorSig}
           date={today}
