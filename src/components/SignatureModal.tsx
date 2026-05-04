@@ -39,6 +39,7 @@ interface SignatureModalProps {
   exteriorSqft?: number;
   itemCategories?: Record<string, string>;
   preSignedSignatureDataUrl?: string;
+  installationDate?: string;
   approvedDiscount?: number;
 }
 
@@ -53,6 +54,7 @@ export default function SignatureModal({
   exteriorSqft,
   itemCategories,
   preSignedSignatureDataUrl,
+  installationDate = '',
   approvedDiscount = 0,
 }: SignatureModalProps) {
   const customerSignaturePadRef = useRef<SignatureCanvas>(null);
@@ -60,27 +62,10 @@ export default function SignatureModal({
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(preSignedSignatureDataUrl || null);
   const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [installationDate, setInstallationDate] = useState<string>('');
+  const [dateInput, setDateInput] = useState<string>(installationDate);
   const [step, setStep] = useState<'date' | 'customer-sign' | 'contractor-sign'>(preSignedSignatureDataUrl ? 'contractor-sign' : 'date');
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
-
-  useEffect(() => {
-    if (preSignedSignatureDataUrl && !installationDate) {
-      const loadEstimate = async () => {
-        try {
-          const res = await fetch(`/api/estimates/${estimateId}`);
-          const { estimate } = await res.json();
-          if (estimate?.installationDate) {
-            setInstallationDate(estimate.installationDate);
-          }
-        } catch (err) {
-          console.error('Failed to load installation date:', err);
-        }
-      };
-      loadEstimate();
-    }
-  }, [preSignedSignatureDataUrl, estimateId, installationDate]);
 
   if (!isOpen) return null;
 
@@ -167,7 +152,7 @@ export default function SignatureModal({
   };
 
   const handleDateSubmit = () => {
-    if (!installationDate) {
+    if (!dateInput) {
       alert('Please select an installation date');
       return;
     }
@@ -215,6 +200,7 @@ export default function SignatureModal({
       setContractorSignatureDataUrl(contractorSig);
 
       // Save both signatures and installation date to database
+      const finalInstallationDate = dateInput || installationDate;
       const res = await fetch(`/api/estimates/${estimateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -222,7 +208,7 @@ export default function SignatureModal({
           signatureDataUrl: signatureDataUrl,
           contractorSignatureDataUrl: contractorSig,
           status: 'signed',
-          installationDate: installationDate,
+          installationDate: finalInstallationDate,
         }),
       });
 
@@ -237,7 +223,7 @@ export default function SignatureModal({
       // Fetch the updated estimate to ensure we have the correct installation date
       const fetchRes = await fetch(`/api/estimates/${estimateId}`);
       const { estimate: updatedEstimate } = await fetchRes.json();
-      const savedInstallationDate = updatedEstimate?.installationDate || installationDate;
+      const savedInstallationDate = updatedEstimate?.installationDate || finalInstallationDate;
 
       // Generate Estimate PDF with customer signature
       const estimatePdf = pdf(
@@ -350,8 +336,8 @@ export default function SignatureModal({
                 <p className="text-gray-600 mb-6">When will the installation take place?</p>
                 <input
                   type="date"
-                  value={installationDate}
-                  onChange={(e) => setInstallationDate(e.target.value)}
+                  value={dateInput}
+                  onChange={(e) => setDateInput(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-6 text-gray-900 font-semibold"
                 />
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
@@ -522,7 +508,7 @@ export default function SignatureModal({
                 <div className="w-80 flex flex-col justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-900 mb-2">{customer.name}</p>
-                    <p className="text-sm text-gray-600 mb-2">Installation: {installationDate}</p>
+                    <p className="text-sm text-gray-600 mb-2">Installation: {dateInput || installationDate}</p>
                     <p className="text-sm text-gray-600 mb-4">Signed: {today}</p>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Total Amount</p>
@@ -562,7 +548,7 @@ export default function SignatureModal({
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center shrink-0">
             <div>
               <h2 className="text-2xl font-bold">Contractor Signature</h2>
-              {preSignedSignatureDataUrl && <p className="text-sm text-green-200 mt-1">✓ Customer signed remotely on {installationDate ? new Date(installationDate).toLocaleDateString() : 'agreement date'}</p>}
+              {preSignedSignatureDataUrl && <p className="text-sm text-green-200 mt-1">✓ Customer signed remotely on {installationDate ? new Date(installationDate).toLocaleDateString() : 'agreement'}</p>}
             </div>
             <button
               onClick={handleClose}
@@ -629,7 +615,7 @@ export default function SignatureModal({
                 <div className="w-80 flex flex-col justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-900 mb-2">Platinum Installs</p>
-                    <p className="text-sm text-gray-600 mb-2">Installation: {installationDate}</p>
+                    <p className="text-sm text-gray-600 mb-2">Installation: {dateInput || installationDate}</p>
                     <p className="text-sm text-gray-600 mb-4">Date: {today}</p>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Total Amount</p>

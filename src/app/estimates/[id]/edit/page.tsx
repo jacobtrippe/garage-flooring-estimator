@@ -85,6 +85,7 @@ export default function EstimateEditor() {
   const [remoteSignInstallationDate, setRemoteSignInstallationDate] = useState<string>('');
   const [remoteSigningUrl, setRemoteSigningUrl] = useState<string>('');
   const [preSignedSignatureDataUrl, setPreSignedSignatureDataUrl] = useState<string | undefined>();
+  const [installationDate, setInstallationDate] = useState<string>('');
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
@@ -137,6 +138,9 @@ export default function EstimateEditor() {
       setQuoteType((estimate.quoteType as QuoteType) || "interior");
       setExteriorSqft(estimate.exteriorSqft ?? 0);
       setApprovedDiscount(estimate.approvedDiscount ?? 0);
+      if (estimate.installationDate) {
+        setInstallationDate(estimate.installationDate);
+      }
       if (estimate.signatureDataUrl) {
         setPreSignedSignatureDataUrl(estimate.signatureDataUrl);
       }
@@ -807,6 +811,7 @@ export default function EstimateEditor() {
             })
           )}
           preSignedSignatureDataUrl={preSignedSignatureDataUrl}
+          installationDate={installationDate}
           approvedDiscount={approvedDiscount}
         />
       )}
