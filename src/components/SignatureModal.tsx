@@ -65,6 +65,23 @@ export default function SignatureModal({
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
 
+  useEffect(() => {
+    if (preSignedSignatureDataUrl && !installationDate) {
+      const loadEstimate = async () => {
+        try {
+          const res = await fetch(`/api/estimates/${estimateId}`);
+          const { estimate } = await res.json();
+          if (estimate?.installationDate) {
+            setInstallationDate(estimate.installationDate);
+          }
+        } catch (err) {
+          console.error('Failed to load installation date:', err);
+        }
+      };
+      loadEstimate();
+    }
+  }, [preSignedSignatureDataUrl, estimateId, installationDate]);
+
   if (!isOpen) return null;
 
   const today = new Date().toLocaleDateString('en-US', {
