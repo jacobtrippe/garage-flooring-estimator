@@ -65,6 +65,7 @@ interface Estimate {
   quoteType: string;
   exteriorSqft: number | null;
   approvedDiscount: number;
+  installationDate?: string;
   signatureDataUrl?: string;
 }
 
