@@ -565,9 +565,9 @@ export default function SignatureModal({
           </div>
 
           {/* Content */}
-          <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div className="flex flex-1 flex-col min-h-0 overflow-y-auto">
             {/* PDF Preview - Agreement Only */}
-            <div className="flex-1 bg-gray-50 border-2 border-gray-300 m-2 rounded-lg overflow-hidden min-h-0">
+            <div className="bg-gray-50 border-2 border-gray-300 m-2 rounded-lg overflow-hidden" style={{ minHeight: '200px', height: '40vh' }}>
               <style>{`
                 .pdf-viewer-fill {
                   width: 100% !important;
@@ -596,7 +596,7 @@ export default function SignatureModal({
             </div>
 
             {/* Signature Section */}
-            <div className="p-4 md:p-8 bg-white border-t-2 border-gray-300 shrink-0">
+            <div className="p-4 md:p-8 pb-10 md:pb-8 bg-white border-t-2 border-gray-300 overflow-y-auto">
               <div className="flex flex-col md:flex-row gap-4 max-w-4xl">
                 {/* Signature Pad */}
                 <div className="flex-1 flex flex-col">
