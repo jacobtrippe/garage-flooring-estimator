@@ -10,7 +10,24 @@ interface Estimate {
   totalPrice: number;
   createdAt: string;
   pdfUrl?: string;
+  customerSignedAt?: string | null;
+  contractorSignatureDataUrl?: string | null;
 }
+
+const WarningBadge = () => (
+  <span
+    title="Customer signed — awaiting your signature"
+    className="inline-flex items-center justify-center w-6 h-6 text-xs font-black flex-shrink-0"
+    style={{
+      clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)',
+      backgroundColor: '#FBBF24',
+      color: '#78350F',
+      paddingTop: '6px',
+    }}
+  >
+    !
+  </span>
+);
 
 interface Customer {
   id: string;
@@ -210,7 +227,10 @@ export default function Customers() {
               <div key={customer.id} className="bg-white rounded-lg shadow-sm p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
+                      {estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl) && <WarningBadge />}
+                    </div>
                     <p className="text-sm text-gray-600">{customer.phone}</p>
                     <div className="flex gap-3 mt-1">
                       <a href={`tel:${customer.phone}`} className="text-sm font-medium text-blue-600">Call</a>
@@ -281,7 +301,10 @@ export default function Customers() {
                     <tr key={customer.id} className="border-b hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-gray-900">{customer.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-gray-900">{customer.name}</p>
+                            {estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl) && <WarningBadge />}
+                          </div>
                           {customer.createdAt && (
                             <div className="text-xs text-gray-500">
                               <p>{new Date(customer.createdAt).toLocaleDateString()}</p>
