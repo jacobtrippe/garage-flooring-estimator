@@ -77,6 +77,12 @@ export async function PUT(
       },
     });
 
+    // Touch customer's updatedAt so they rise to the top of the customer list
+    await prisma.customer.update({
+      where: { id: estimate.customerId },
+      data: { updatedAt: new Date() },
+    });
+
     return NextResponse.json(estimate);
   } catch (error) {
     console.error('PUT /api/estimates/[id] error:', error);
