@@ -136,71 +136,21 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-100 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-              <h1 className="text-2xl font-bold text-white">✓ Signature Received</h1>
-              <p className="text-green-100 mt-1">Thank you for signing! Your signed documents are ready below.</p>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">
-                  We've received your signature, {successCustomerName}. Both documents are ready for you to view, print, or save.
-                </p>
-                <p className="text-sm text-green-700 mt-2">
-                  Our team will contact you within 1 business day to confirm the details and schedule your installation.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Estimate</h3>
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 h-80 overflow-auto mb-3">
-                    {token && (
-                      <iframe
-                        src={`/api/sign/${token}/estimate-pdf`}
-                        className="w-full h-full border-0"
-                        title="Signed Estimate"
-                      />
-                    )}
-                  </div>
-                  <a
-                    href={`/api/sign/${token}/estimate-pdf`}
-                    download={`Estimate-${token}.pdf`}
-                    className="block w-full px-4 py-2 bg-blue-600 text-white rounded text-center font-medium hover:bg-blue-700"
-                  >
-                    Download Estimate
-                  </a>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Service Agreement</h3>
-                  <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 h-80 overflow-auto mb-3">
-                    {token && (
-                      <iframe
-                        src={`/api/sign/${token}/pdf`}
-                        className="w-full h-full border-0"
-                        title="Signed Agreement"
-                      />
-                    )}
-                  </div>
-                  <a
-                    href={`/api/sign/${token}/pdf`}
-                    download={`Agreement-${token}.pdf`}
-                    className="block w-full px-4 py-2 bg-blue-600 text-white rounded text-center font-medium hover:bg-blue-700"
-                  >
-                    Download Agreement
-                  </a>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Next Steps:</strong> Keep these documents for your records. Our team will reach out to confirm your installation date and finalize all the details. If you have any questions, feel free to contact us.
-                </p>
-              </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-12">
+        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full overflow-hidden">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-6 text-center">
+            <div className="text-5xl mb-3">✓</div>
+            <h1 className="text-2xl font-bold text-white">Signature Received</h1>
+          </div>
+          <div className="p-6 space-y-4 text-center">
+            <p className="text-gray-800 text-lg font-medium">
+              Thank you, {successCustomerName}!
+            </p>
+            <p className="text-gray-600">
+              Your signature has been received. Copies of your signed estimate and service agreement will be emailed to you once the contractor has added their signature.
+            </p>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+              Our team will be in touch to confirm your installation details.
             </div>
           </div>
         </div>
