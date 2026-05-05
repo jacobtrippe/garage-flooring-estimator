@@ -486,6 +486,10 @@ export default function EstimateEditor() {
                   <div>
                     <p className="font-semibold text-gray-700">Phone</p>
                     <p className="text-gray-900">{customer.phone}</p>
+                    <div className="flex gap-3 mt-1">
+                      <a href={`tel:${customer.phone}`} className="text-xs font-medium text-blue-600">Call</a>
+                      <a href={`sms:${customer.phone}`} className="text-xs font-medium text-green-600">Text</a>
+                    </div>
                   </div>
                   <div>
                     <p className="font-semibold text-gray-700">Address</p>

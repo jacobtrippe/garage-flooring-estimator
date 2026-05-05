@@ -211,7 +211,11 @@ export default function Customers() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
-                    <a href={`tel:${customer.phone}`} className="text-sm text-blue-600">{customer.phone}</a>
+                    <p className="text-sm text-gray-600">{customer.phone}</p>
+                    <div className="flex gap-3 mt-1">
+                      <a href={`tel:${customer.phone}`} className="text-sm font-medium text-blue-600">Call</a>
+                      <a href={`sms:${customer.phone}`} className="text-sm font-medium text-green-600">Text</a>
+                    </div>
                   </div>
                   <span className="text-xs text-gray-400">{estimates.length} estimate{estimates.length !== 1 ? 's' : ''}</span>
                 </div>
@@ -287,7 +291,13 @@ export default function Customers() {
                         </div>
                       </td>
                       <td className="px-6 py-4">{customer.email}</td>
-                      <td className="px-6 py-4">{customer.phone}</td>
+                      <td className="px-6 py-4">
+                        <div>{customer.phone}</div>
+                        <div className="flex gap-3 mt-1">
+                          <a href={`tel:${customer.phone}`} className="text-xs font-medium text-blue-600">Call</a>
+                          <a href={`sms:${customer.phone}`} className="text-xs font-medium text-green-600">Text</a>
+                        </div>
+                      </td>
                       <td className="px-6 py-4">{customer.garageSqft}</td>
                       <td className="px-6 py-4">{customer.carPorts}</td>
                       <td className="px-6 py-4">
