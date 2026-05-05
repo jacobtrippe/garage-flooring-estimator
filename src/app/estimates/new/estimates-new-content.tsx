@@ -454,11 +454,11 @@ export function EstimatesNewContent() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
-      <div className="max-w-6xl mx-auto p-8">
-        <div className="grid grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Customer Info */}
           <div className="col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+            <div className="bg-white rounded-lg shadow-sm p-6 lg:sticky lg:top-8">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold" style={{ color: '#2f2f30' }}>Customer Info</h2>
                 <button
@@ -631,7 +631,7 @@ export function EstimatesNewContent() {
 
           {/* Middle: Products */}
           <div className="col-span-1">
-            <div className="mb-6 flex gap-2 justify-center">
+            <div className="mb-6 flex flex-wrap gap-2 justify-center">
               {(["interior", "exterior", "both"] as QuoteType[]).map((type) => (
                 <button
                   key={type}
@@ -707,10 +707,10 @@ export function EstimatesNewContent() {
 
           {/* Right: Selected Items & Total */}
           <div className="col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+            <div className="bg-white rounded-lg shadow-sm p-6 lg:sticky lg:top-8">
               <h2 className="text-2xl font-bold mb-4" style={{ color: '#2f2f30' }}>Estimate Summary</h2>
 
-              <div className="space-y-3 max-h-96 overflow-y-auto mb-6">
+              <div className="space-y-3 max-h-48 lg:max-h-96 overflow-y-auto mb-6">
                 {selectedItems.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">No items selected</p>
                 ) : (

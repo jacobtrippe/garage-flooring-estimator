@@ -47,22 +47,22 @@ export default function NewCustomer() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
-      <div className="max-w-2xl mx-auto p-8">
+      <div className="max-w-2xl mx-auto p-4 md:p-8">
         <div className="mb-6">
-          <Link href="/customers" className="font-medium hover:opacity-75 transition" style={{ color: '#1B3A5C' }}>
+          <Link href="/customers" className="font-medium hover:opacity-75 transition py-2 inline-block" style={{ color: '#1B3A5C' }}>
             ← Back to Customers
           </Link>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <h2 className="text-3xl font-bold mb-8" style={{ color: '#2f2f30' }}>Add New Customer</h2>
-          <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="bg-white rounded-lg shadow-sm p-4 md:p-8">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: '#2f2f30' }}>Add New Customer</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Contact Information Section */}
             <div>
               <h3 className="text-lg font-semibold mb-4" style={{ color: '#2f2f30', paddingBottom: '8px', borderBottom: '2px solid #1B3A5C' }}>
                 Contact Information
               </h3>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#2f2f30' }}>
                     Full Name <span style={{ color: '#dc2626' }}>*</span>
@@ -92,7 +92,7 @@ export default function NewCustomer() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#2f2f30' }}>
                     Phone <span style={{ color: '#dc2626' }}>*</span>
@@ -131,7 +131,7 @@ export default function NewCustomer() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#2f2f30' }}>
                     City <span style={{ color: '#dc2626' }}>*</span>
@@ -182,7 +182,7 @@ export default function NewCustomer() {
               <h3 className="text-lg font-semibold mb-4" style={{ color: '#2f2f30', paddingBottom: '8px', borderBottom: '2px solid #1B3A5C' }}>
                 Garage Details
               </h3>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#2f2f30' }}>
                     Garage Sqft <span style={{ color: '#dc2626' }}>*</span>

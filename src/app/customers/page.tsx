@@ -176,30 +176,79 @@ export default function Customers() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F9FAFB' }}>
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-4 md:p-8">
         <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-3xl font-bold" style={{ color: '#2f2f30' }}>Customers</h2>
+          <h2 className="text-2xl md:text-3xl font-bold" style={{ color: '#2f2f30' }}>Customers</h2>
           <Link
             href="/customers/new"
-            className="text-white px-6 py-2 rounded-md font-medium hover:opacity-90 transition"
+            className="text-white px-4 py-2 rounded-md font-medium hover:opacity-90 transition text-sm md:text-base"
             style={{ backgroundColor: '#1B3A5C' }}
           >
-            Add Customer
+            + Add
           </Link>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <input
             type="text"
-            placeholder="Search by name, email, phone, sqft, car ports, or date..."
+            placeholder="Search customers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+            className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
             style={{ '--tw-ring-color': '#1B3A5C' } as any}
           />
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm pb-64">
+        {/* Mobile Card List */}
+        <div className="md:hidden space-y-3 mb-4">
+          {filteredCustomers.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">{searchTerm ? 'No customers match your search' : 'No customers yet'}</p>
+          ) : filteredCustomers.map((customer) => {
+            const estimates = estimatesByCustomerId[customer.id] || [];
+            const latestEstimate = estimates[0];
+            return (
+              <div key={customer.id} className="bg-white rounded-lg shadow-sm p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
+                    <a href={`tel:${customer.phone}`} className="text-sm text-blue-600">{customer.phone}</a>
+                  </div>
+                  <span className="text-xs text-gray-400">{estimates.length} estimate{estimates.length !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-3">{customer.garageSqft} sqft · {customer.carPorts} car</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEditCustomer(customer)}
+                    className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                    style={{ backgroundColor: '#1B3A5C' }}
+                  >
+                    Edit
+                  </button>
+                  {latestEstimate ? (
+                    <Link
+                      href={`/estimates/${latestEstimate.id}/edit`}
+                      className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
+                      style={{ backgroundColor: '#1B3A5C' }}
+                    >
+                      Estimate
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/estimates/new?customer=${customer.id}`}
+                      className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
+                      style={{ backgroundColor: '#059669' }}
+                    >
+                      New Estimate
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden md:block bg-white rounded-lg shadow-sm pb-64">
           <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="border-b" style={{ backgroundColor: '#F9FAFB', borderColor: '#e5e7eb' }}>

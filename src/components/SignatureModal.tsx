@@ -421,7 +421,7 @@ export default function SignatureModal({
           {/* Content */}
           <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
             {/* Tab Buttons */}
-            <div className="flex gap-4 px-8 py-4 border-b-2 border-gray-300 bg-gray-50 shrink-0">
+            <div className="flex gap-2 px-4 md:px-8 py-3 border-b-2 border-gray-300 bg-gray-50 shrink-0">
               <button
                 onClick={() => setActiveTab('estimate')}
                 className={`px-6 py-2 rounded font-semibold transition ${
@@ -489,12 +489,12 @@ export default function SignatureModal({
             </div>
 
             {/* Signature Section */}
-            <div className="p-8 bg-white border-t-2 border-gray-300 shrink-0">
-              <div className="flex gap-6 max-w-4xl">
+            <div className="p-4 md:p-8 bg-white border-t-2 border-gray-300 shrink-0">
+              <div className="flex flex-col md:flex-row gap-4 max-w-4xl">
                 {/* Signature Pad */}
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Customer Signature</h3>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '200px' }}>
+                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '160px' }}>
                     <SignatureCanvas
                       ref={customerSignaturePadRef}
                       canvasProps={{
@@ -511,27 +511,27 @@ export default function SignatureModal({
                 </div>
 
                 {/* Info & Buttons */}
-                <div className="w-80 flex flex-col justify-between">
+                <div className="w-full md:w-80 flex flex-col justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-2">{customer.name}</p>
-                    <p className="text-sm text-gray-600 mb-2">Installation: {dateInput || installationDate}</p>
-                    <p className="text-sm text-gray-600 mb-4">Signed: {today}</p>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-2">Total Amount</p>
-                      <p className="text-3xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">{customer.name}</p>
+                    <p className="text-sm text-gray-600 mb-1">Installation: {dateInput || installationDate}</p>
+                    <p className="text-sm text-gray-600 mb-3">Signed: {today}</p>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 mt-6">
+                  <div className="flex flex-col gap-3 mt-4">
                     <button
                       onClick={handleClearCustomerSignature}
-                      className="w-full bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
+                      className="w-full bg-gray-300 text-gray-900 px-4 py-3 rounded font-semibold hover:bg-gray-400 transition"
                     >
                       Clear
                     </button>
                     <button
                       onClick={handleCustomerSignatureConfirm}
-                      className="w-full bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                      className="w-full bg-blue-600 text-white px-4 py-3 rounded font-semibold hover:bg-blue-700 transition"
                     >
                       Customer Signed - Contractor Signs Next
                     </button>
@@ -596,12 +596,12 @@ export default function SignatureModal({
             </div>
 
             {/* Signature Section */}
-            <div className="p-8 bg-white border-t-2 border-gray-300 shrink-0">
-              <div className="flex gap-6 max-w-4xl">
+            <div className="p-4 md:p-8 bg-white border-t-2 border-gray-300 shrink-0">
+              <div className="flex flex-col md:flex-row gap-4 max-w-4xl">
                 {/* Signature Pad */}
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3">Contractor Signature</h3>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '200px' }}>
+                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '160px' }}>
                     <SignatureCanvas
                       ref={contractorSignaturePadRef}
                       canvasProps={{
@@ -618,28 +618,28 @@ export default function SignatureModal({
                 </div>
 
                 {/* Info & Buttons */}
-                <div className="w-80 flex flex-col justify-between">
+                <div className="w-full md:w-80 flex flex-col justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-2">Platinum Installs</p>
-                    <p className="text-sm text-gray-600 mb-2">Installation: {dateInput || installationDate}</p>
-                    <p className="text-sm text-gray-600 mb-4">Date: {today}</p>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-2">Total Amount</p>
-                      <p className="text-3xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-gray-900 mb-1">Platinum Installs</p>
+                    <p className="text-sm text-gray-600 mb-1">Installation: {dateInput || installationDate}</p>
+                    <p className="text-sm text-gray-600 mb-3">Date: {today}</p>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
+                      <p className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 mt-6">
+                  <div className="flex flex-col gap-3 mt-4">
                     <button
                       onClick={handleClearContractorSignature}
-                      className="w-full bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
+                      className="w-full bg-gray-300 text-gray-900 px-4 py-3 rounded font-semibold hover:bg-gray-400 transition"
                     >
                       Clear
                     </button>
                     <button
                       onClick={handleContractorSignatureConfirm}
                       disabled={saving}
-                      className="w-full bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
+                      className="w-full bg-green-600 text-white px-4 py-3 rounded font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
                     >
                       {saving ? 'Sending...' : 'Sign & Send Both Documents'}
                     </button>
