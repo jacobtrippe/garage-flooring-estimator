@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -19,6 +19,13 @@ export default function NewCustomer() {
     notes: "",
   });
 
+  const [autoFillOpen, setAutoFillOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState("");
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const screenshotRef = useRef<HTMLInputElement>(null);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -26,6 +33,68 @@ export default function NewCustomer() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const applyExtracted = (extracted: Record<string, string>) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: extracted.name || prev.name,
+      email: extracted.email || prev.email,
+      phone: extracted.phone || prev.phone,
+      street: extracted.street || prev.street,
+      city: extracted.city || prev.city,
+      state: extracted.state || prev.state,
+      zip: extracted.zip || prev.zip,
+      notes: extracted.notes || prev.notes,
+    }));
+    setAutoFillOpen(false);
+    setPasteText("");
+    setExtractError("");
+  };
+
+  const extractFromText = async () => {
+    if (!pasteText.trim()) return;
+    setExtracting(true);
+    setExtractError("");
+    try {
+      const res = await fetch("/api/extract-customer-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: pasteText }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      applyExtracted(data.extracted);
+    } catch (err) {
+      setExtractError("Could not extract info. Try editing fields manually.");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const extractFromImage = async (file: File) => {
+    setExtracting(true);
+    setExtractError("");
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(",")[1];
+        const mediaType = file.type || "image/jpeg";
+        const res = await fetch("/api/extract-customer-info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64, mediaType }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        applyExtracted(data.extracted);
+        setExtracting(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setExtractError("Could not read image. Try again or paste text.");
+      setExtracting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +124,112 @@ export default function NewCustomer() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-4 md:p-8">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6" style={{ color: '#2f2f30' }}>Add New Customer</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold" style={{ color: '#2f2f30' }}>Add New Customer</h2>
+            <button
+              type="button"
+              onClick={() => { setAutoFillOpen(!autoFillOpen); setExtractError(""); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition"
+              style={{ backgroundColor: '#059669' }}
+            >
+              ✦ Auto-fill
+            </button>
+          </div>
+
+          {/* Auto-fill Panel */}
+          {autoFillOpen && (
+            <div className="mb-6 border-2 border-green-200 rounded-xl p-4 bg-green-50">
+              <p className="text-sm font-semibold text-green-800 mb-4">Choose how to import customer info:</p>
+
+              {/* Hidden file inputs */}
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && extractFromImage(e.target.files[0])}
+              />
+              <input
+                ref={screenshotRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && extractFromImage(e.target.files[0])}
+              />
+
+              {/* Option buttons */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  disabled={extracting}
+                  className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-green-300 rounded-xl text-center hover:bg-green-50 transition disabled:opacity-50"
+                >
+                  <span className="text-2xl">📷</span>
+                  <span className="text-xs font-semibold text-gray-700">Take Photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => screenshotRef.current?.click()}
+                  disabled={extracting}
+                  className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-green-300 rounded-xl text-center hover:bg-green-50 transition disabled:opacity-50"
+                >
+                  <span className="text-2xl">🖼️</span>
+                  <span className="text-xs font-semibold text-gray-700">Screenshot</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('paste-area')?.focus()}
+                  className="flex flex-col items-center gap-2 p-4 bg-white border-2 border-green-300 rounded-xl text-center hover:bg-green-50 transition"
+                >
+                  <span className="text-2xl">📋</span>
+                  <span className="text-xs font-semibold text-gray-700">Paste Text</span>
+                </button>
+              </div>
+
+              {/* Paste area */}
+              <textarea
+                id="paste-area"
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder="Paste calendar event, contact info, or any text with customer details here..."
+                className="w-full border-2 border-green-300 rounded-lg px-3 py-3 text-sm text-gray-800 focus:outline-none focus:border-green-500 resize-none"
+                rows={4}
+              />
+
+              {extractError && (
+                <p className="text-red-600 text-sm mt-2">{extractError}</p>
+              )}
+
+              <div className="flex gap-3 mt-3">
+                {pasteText.trim() && (
+                  <button
+                    type="button"
+                    onClick={extractFromText}
+                    disabled={extracting}
+                    className="flex-1 py-3 rounded-lg text-white font-semibold text-sm transition disabled:opacity-50"
+                    style={{ backgroundColor: '#059669' }}
+                  >
+                    {extracting ? "Reading..." : "Fill from Text"}
+                  </button>
+                )}
+                {extracting && !pasteText.trim() && (
+                  <div className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold text-sm text-center">
+                    Reading image...
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setAutoFillOpen(false); setPasteText(""); setExtractError(""); }}
+                  className="px-4 py-3 rounded-lg bg-gray-200 text-gray-700 font-semibold text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Contact Information Section */}
             <div>
