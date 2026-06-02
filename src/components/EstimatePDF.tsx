@@ -361,7 +361,7 @@ export default function EstimatePDF({
             <View style={styles.presentedByInfo}>
               <Text style={styles.customerName}>Jacob Trippe</Text>
               <Text style={styles.customerDetails}>Platinum Installs</Text>
-              <Text style={styles.customerDetails}>(949) 289-4375</Text>
+              <Text style={styles.customerDetails}>(214) 813-7474</Text>
               <Text style={styles.customerDetails}>jtplatinstalls.com</Text>
             </View>
           </View>

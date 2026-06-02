@@ -320,7 +320,7 @@ export default function ServiceAgreementPDF({
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Platinum Installs | Dallas–Fort Worth, TX | (949) 289-4375 | platinuminstallsdfw@gmail.com</Text>
+          <Text style={styles.footerText}>Platinum Installs | Dallas–Fort Worth, TX | (214) 813-7474 | platinuminstallsdfw@gmail.com</Text>
           <Text style={styles.footerText}>Honest, Reliable, Admirable</Text>
         </View>
       </Page>
