@@ -241,7 +241,7 @@ export default function ServiceAgreementPDF({
         <View style={styles.scopeSection}>
           <Text style={styles.scopeTitle}>2. Materials & Workmanship</Text>
           <Text style={styles.scopeText}>
-            All materials used are premium-grade and applied according to manufacturer specifications. Contractor guarantees professional, workmanlike performance with a promise to repair any failures due to improper installation upto, but not beyond, 15 years after the date of installation. The Contractor will honor the chosen limited warranties for material, covering peeling, delamination, or coating failure under normal residential use.
+            All materials used are premium-grade and applied according to manufacturer specifications. Contractor guarantees professional, workmanlike performance with a promise to repair any failures due to improper installation upto, but not beyond, 15 years after the date of installation for interior coatings and 7 years after the date of installation for exterior coatings. The Contractor will honor the chosen limited warranties for material, covering peeling, delamination, or coating failure under normal residential use.
           </Text>
         </View>
 
