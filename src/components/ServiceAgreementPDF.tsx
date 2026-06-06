@@ -298,6 +298,14 @@ export default function ServiceAgreementPDF({
           </Text>
         </View>
 
+        {/* 9. Pre-Existing Substrate Conditions */}
+        <View style={styles.scopeSection}>
+          <Text style={styles.scopeTitle}>9. Pre-Existing Substrate Conditions</Text>
+          <Text style={styles.scopeText}>
+            Platinum Installs is not responsible for coating failures caused by defects in the existing concrete substrate, including but not limited to: inadequate concrete mix design, improper curing, settlement or structural cracking, excessive moisture or hydrostatic pressure, or workmanship deficiencies from prior contractors. Customer acknowledges that epoxy coatings are dependent on the integrity of the underlying concrete, and that pre-existing substrate deficiencies may cause delamination, cracking, or adhesion failure that are outside the Contractor's control and are not covered under any warranty or guarantee provided by Platinum Installs. If substrate issues are discovered during surface preparation, Contractor will notify Customer before proceeding; additional remediation work, if agreed upon, will be documented as a change order.
+          </Text>
+        </View>
+
         {/* Signature Section */}
         <View style={styles.signatureSection}>
           <View style={styles.signatureRow}>
