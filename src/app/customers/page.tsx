@@ -77,10 +77,17 @@ function formatSummaryDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+type Tab = 'active' | 'signed' | 'no-estimates' | 'all';
+
+function isFullySigned(e: Estimate): boolean {
+  return !!(e.contractorSignatureDataUrl || e.status === 'signed');
+}
+
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [estimatesByCustomerId, setEstimatesByCustomerId] = useState<Record<string, Estimate[]>>({});
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('active');
   const [loading, setLoading] = useState(true);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Customer | null>(null);
@@ -203,6 +210,35 @@ export default function Customers() {
     );
   });
 
+  // Tab counts computed from search-filtered list (before tab filter)
+  const tabCounts = {
+    active: filteredCustomers.filter(c => {
+      const ests = estimatesByCustomerId[c.id] || [];
+      return ests.length > 0 && !isFullySigned(ests[0]);
+    }).length,
+    signed: filteredCustomers.filter(c => {
+      const ests = estimatesByCustomerId[c.id] || [];
+      return ests.length > 0 && isFullySigned(ests[0]);
+    }).length,
+    'no-estimates': filteredCustomers.filter(c => (estimatesByCustomerId[c.id] || []).length === 0).length,
+    all: filteredCustomers.length,
+  };
+
+  // Tab filter applied on top of search filter
+  const displayCustomers = filteredCustomers.filter(c => {
+    const ests = estimatesByCustomerId[c.id] || [];
+    if (activeTab === 'all')          return true;
+    if (activeTab === 'no-estimates') return ests.length === 0;
+    if (activeTab === 'signed')       return ests.length > 0 && isFullySigned(ests[0]);
+    if (activeTab === 'active')       return ests.length > 0 && !isFullySigned(ests[0]);
+    return true;
+  });
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setExpandedCustomerId(null);
+  };
+
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
@@ -230,13 +266,35 @@ export default function Customers() {
           />
         </div>
 
+        {/* Tab bar */}
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {([
+            { key: 'active',       label: 'Active' },
+            { key: 'signed',       label: 'Signed' },
+            { key: 'no-estimates', label: 'No Estimates' },
+            { key: 'all',          label: 'All' },
+          ] as { key: Tab; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => handleTabChange(key)}
+              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition hover:opacity-90"
+              style={activeTab === key
+                ? { backgroundColor: '#1B3A5C', color: '#ffffff' }
+                : { backgroundColor: '#F3F4F6', color: '#374151' }
+              }
+            >
+              {label} <span className="ml-1 opacity-75">({tabCounts[key]})</span>
+            </button>
+          ))}
+        </div>
+
         {/* Mobile Card List */}
         <div className="md:hidden space-y-3 mb-4">
-          {filteredCustomers.length === 0 ? (
+          {displayCustomers.length === 0 ? (
             <p className="text-center text-gray-500 py-8">
               {searchTerm ? 'No customers match your search' : 'No customers yet'}
             </p>
-          ) : filteredCustomers.map((customer) => {
+          ) : displayCustomers.map((customer) => {
             const estimates = estimatesByCustomerId[customer.id] || [];
             const priorityEstimate = estimates[0];
             const isExpanded = expandedCustomerId === customer.id;
@@ -387,14 +445,14 @@ export default function Customers() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCustomers.length === 0 ? (
+                {displayCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                       {searchTerm ? 'No customers match your search' : 'No customers yet'}
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.flatMap((customer) => {
+                  displayCustomers.flatMap((customer) => {
                     const estimates = estimatesByCustomerId[customer.id] || [];
                     const priorityEstimate = estimates[0];
                     const isExpanded = expandedCustomerId === customer.id;
