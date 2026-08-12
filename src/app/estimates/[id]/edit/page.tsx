@@ -67,7 +67,7 @@ interface Estimate {
   approvedDiscount: number;
   installationDate?: string;
   signatureDataUrl?: string;
-  jobPhotoUrl?: string | null;
+  photos?: { id: string; url: string }[];
 }
 
 type QuoteType = "interior" | "exterior" | "both";
@@ -88,7 +88,7 @@ export default function EstimateEditor() {
   const [remoteSigningUrl, setRemoteSigningUrl] = useState<string>('');
   const [preSignedSignatureDataUrl, setPreSignedSignatureDataUrl] = useState<string | undefined>();
   const [installationDate, setInstallationDate] = useState<string>('');
-  const [jobPhotoUrl, setJobPhotoUrl] = useState<string | undefined>();
+  const [jobPhotos, setJobPhotos] = useState<{ id: string; url: string }[]>([]);
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
@@ -147,9 +147,7 @@ export default function EstimateEditor() {
       if (estimate.signatureDataUrl) {
         setPreSignedSignatureDataUrl(estimate.signatureDataUrl);
       }
-      if (estimate.jobPhotoUrl) {
-        setJobPhotoUrl(estimate.jobPhotoUrl);
-      }
+      setJobPhotos(estimate.photos ?? []);
 
       const res2 = await fetch(`/api/customers/${estimate.customerId}`);
       if (!res2.ok) {
@@ -784,7 +782,7 @@ export default function EstimateEditor() {
 
                   <button
                     onClick={() => {
-                      if (!jobPhotoUrl) {
+                      if (jobPhotos.length === 0) {
                         alert('Add a job photo first — click "Generate PDF & Sign" to add one.');
                         return;
                       }
@@ -829,8 +827,9 @@ export default function EstimateEditor() {
           preSignedSignatureDataUrl={preSignedSignatureDataUrl}
           installationDate={installationDate}
           approvedDiscount={approvedDiscount}
-          jobPhotoUrl={jobPhotoUrl}
-          onPhotoSaved={(url) => setJobPhotoUrl(url)}
+          jobPhotos={jobPhotos}
+          onPhotoAdded={(photo) => setJobPhotos(prev => [...prev, photo])}
+          onPhotoRemoved={(photoId) => setJobPhotos(prev => prev.filter(p => p.id !== photoId))}
         />
       )}
 

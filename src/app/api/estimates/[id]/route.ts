@@ -16,6 +16,7 @@ export async function GET(
           select: { id: true, productId: true, name: true, price: true },
         },
         customer: true,
+        photos: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -74,6 +75,7 @@ export async function PUT(
         items: {
           select: { id: true, productId: true, name: true, price: true },
         },
+        photos: { orderBy: { createdAt: 'asc' } },
       },
     });
 

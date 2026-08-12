@@ -35,14 +35,16 @@ export async function POST(
     }
 
     const buffer = await file.arrayBuffer();
-    const fileName = `Photo-${id.slice(-8)}.jpg`;
+    // Unique filename per upload — no collisions across multiple photos
+    const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const fileName = `Photo-${uniqueSuffix}.jpg`;
     const filePath = `${estimate.customerId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('estimates')
       .upload(filePath, buffer, {
         contentType: 'image/jpeg',
-        upsert: true,
+        upsert: false,
       });
 
     if (uploadError) {
@@ -54,14 +56,13 @@ export async function POST(
       .from('estimates')
       .getPublicUrl(filePath);
 
-    const jobPhotoUrl = publicUrlData?.publicUrl;
+    const url = publicUrlData?.publicUrl;
 
-    await prisma.estimate.update({
-      where: { id },
-      data: { jobPhotoUrl },
+    const photo = await prisma.estimatePhoto.create({
+      data: { estimateId: id, url },
     });
 
-    return NextResponse.json({ success: true, jobPhotoUrl });
+    return NextResponse.json({ success: true, photo: { id: photo.id, url: photo.url } });
   } catch (error) {
     console.error('Upload photo error:', error);
     return NextResponse.json({ error: 'Failed to process upload' }, { status: 500 });

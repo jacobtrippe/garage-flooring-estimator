@@ -41,8 +41,9 @@ interface SignatureModalProps {
   preSignedSignatureDataUrl?: string;
   installationDate?: string;
   approvedDiscount?: number;
-  jobPhotoUrl?: string;
-  onPhotoSaved?: (url: string) => void;
+  jobPhotos?: { id: string; url: string }[];
+  onPhotoAdded?: (photo: { id: string; url: string }) => void;
+  onPhotoRemoved?: (photoId: string) => void;
 }
 
 export default function SignatureModal({
@@ -58,8 +59,9 @@ export default function SignatureModal({
   preSignedSignatureDataUrl,
   installationDate = '',
   approvedDiscount = 0,
-  jobPhotoUrl: initialJobPhotoUrl,
-  onPhotoSaved,
+  jobPhotos: initialJobPhotos,
+  onPhotoAdded,
+  onPhotoRemoved,
 }: SignatureModalProps) {
   const customerSignaturePadRef = useRef<SignatureCanvas>(null);
   const contractorSignaturePadRef = useRef<SignatureCanvas>(null);
@@ -69,13 +71,12 @@ export default function SignatureModal({
   const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dateInput, setDateInput] = useState<string>(installationDate || '');
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>(initialJobPhotos ?? []);
   const [step, setStep] = useState<'photo' | 'date' | 'customer-sign' | 'contractor-sign'>(
-    preSignedSignatureDataUrl ? 'contractor-sign' : initialJobPhotoUrl ? 'date' : 'photo'
+    preSignedSignatureDataUrl ? 'contractor-sign' : (initialJobPhotos ?? []).length > 0 ? 'date' : 'photo'
   );
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(initialJobPhotoUrl || null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
@@ -332,51 +333,57 @@ export default function SignatureModal({
     onClose();
   };
 
-  const handlePhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreviewUrl(URL.createObjectURL(file));
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    // Reset input so the same file can be re-selected after removal
+    e.target.value = '';
+    setUploadingPhoto(true);
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          alert('Failed to upload one or more photos. Please try again.');
+          continue;
+        }
+        const { photo } = await res.json();
+        setPhotos(prev => [...prev, photo]);
+        if (onPhotoAdded) onPhotoAdded(photo);
+      } catch (error) {
+        console.error('Photo upload error:', error);
+        alert('Error uploading photo');
+      }
+    }
+    setUploadingPhoto(false);
   };
 
-  const handlePhotoUpload = async () => {
-    if (!photoFile) return;
-    setUploadingPhoto(true);
+  const handleDeletePhoto = async (photoId: string) => {
     try {
-      const formData = new FormData();
-      formData.append('file', photoFile);
-      const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) {
-        alert('Failed to upload photo. Please try again.');
-        setUploadingPhoto(false);
-        return;
-      }
-      const { jobPhotoUrl } = await res.json();
-      if (onPhotoSaved) onPhotoSaved(jobPhotoUrl);
-      setUploadingPhoto(false);
-      setStep('date');
+      await fetch(`/api/estimates/${estimateId}/photos/${photoId}`, { method: 'DELETE' });
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      if (onPhotoRemoved) onPhotoRemoved(photoId);
     } catch (error) {
-      console.error('Photo upload error:', error);
-      alert('Error uploading photo');
-      setUploadingPhoto(false);
+      console.error('Delete photo error:', error);
     }
   };
 
-  // Step 0: Job Photo
+  // Step 0: Job Photos
   if (step === 'photo') {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+        <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-screen overflow-y-auto">
           <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Add a Job Photo</h2>
+            <h2 className="text-2xl font-bold">Job Photos</h2>
             <button onClick={handleClose} className="text-gray-300 hover:text-white text-3xl">×</button>
           </div>
 
-          <div className="p-8">
-            <p className="text-gray-600 mb-6">Required before sending to the customer.</p>
+          <div className="p-6">
+            <p className="text-gray-600 mb-4 text-sm">Add at least one photo before sending to the customer.</p>
 
             {/* Hidden file inputs */}
             <input
@@ -385,51 +392,62 @@ export default function SignatureModal({
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={handlePhotoSelected}
+              onChange={handleFilesSelected}
             />
             <input
               ref={libraryInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={handlePhotoSelected}
+              onChange={handleFilesSelected}
             />
 
-            {!photoPreviewUrl ? (
-              <div className="flex flex-col gap-3 mb-6">
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="w-full py-3 rounded-lg font-semibold text-white hover:opacity-90 transition"
-                  style={{ backgroundColor: '#1B3A5C' }}
-                >
-                  📷 Take Photo
-                </button>
-                <button
-                  onClick={() => libraryInputRef.current?.click()}
-                  className="w-full py-3 rounded-lg font-semibold border-2 hover:bg-gray-50 transition"
-                  style={{ borderColor: '#1B3A5C', color: '#1B3A5C' }}
-                >
-                  🖼️ Choose from Library
-                </button>
-              </div>
-            ) : (
-              <div className="mb-6">
-                <img
-                  src={photoPreviewUrl}
-                  alt="Job site preview"
-                  className="w-full max-h-56 object-cover rounded-lg border border-gray-200 mb-3"
-                />
-                <button
-                  onClick={() => {
-                    setPhotoFile(null);
-                    setPhotoPreviewUrl(null);
-                  }}
-                  className="text-sm text-gray-500 hover:text-gray-700 underline"
-                >
-                  Retake
-                </button>
+            {/* Photo grid */}
+            {photos.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {photos.map(photo => (
+                  <div key={photo.id} className="relative">
+                    <img
+                      src={photo.url}
+                      alt="Job site"
+                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      onClick={() => handleDeletePhoto(photo.id)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center hover:bg-red-600 transition leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
+
+            {/* Upload spinner */}
+            {uploadingPhoto && (
+              <p className="text-sm text-gray-500 mb-3">Uploading…</p>
+            )}
+
+            {/* Add photo buttons */}
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-white hover:opacity-90 transition disabled:opacity-50 text-sm"
+                style={{ backgroundColor: '#1B3A5C' }}
+              >
+                📷 Take Photo
+              </button>
+              <button
+                onClick={() => libraryInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="flex-1 py-2.5 rounded-lg font-semibold border-2 hover:bg-gray-50 transition disabled:opacity-50 text-sm"
+                style={{ borderColor: '#1B3A5C', color: '#1B3A5C' }}
+              >
+                🖼️ Library
+              </button>
+            </div>
 
             <div className="flex gap-3">
               <button
@@ -439,12 +457,12 @@ export default function SignatureModal({
                 Cancel
               </button>
               <button
-                onClick={handlePhotoUpload}
-                disabled={!photoFile || uploadingPhoto}
+                onClick={() => setStep('date')}
+                disabled={photos.length === 0 || uploadingPhoto}
                 className="flex-1 text-white px-4 py-2 rounded font-semibold hover:opacity-90 transition disabled:opacity-50"
                 style={{ backgroundColor: '#059669' }}
               >
-                {uploadingPhoto ? 'Uploading…' : 'Upload & Continue'}
+                Continue ({photos.length} photo{photos.length !== 1 ? 's' : ''})
               </button>
             </div>
           </div>

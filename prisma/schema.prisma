@@ -43,9 +43,9 @@ model Estimate {
   customerSignedAt           DateTime?
   agreementPdfUrl            String?
   estimatePdfUrl             String?
-  jobPhotoUrl                String?
   customer                   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items                      EstimateItem[]
+  photos                     EstimatePhoto[]
 }
 
 model EstimateItem {
@@ -80,6 +80,14 @@ model Product {
   updatedAt     DateTime       @updatedAt
   estimateItems EstimateItem[]
   section       Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+}
+
+model EstimatePhoto {
+  id         String   @id @default(cuid())
+  estimateId String
+  url        String
+  createdAt  DateTime @default(now())
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
 }
 
 model PlatinumInquiry {

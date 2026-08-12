@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
         items: {
           select: { id: true, productId: true, name: true, price: true },
         },
+        photos: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });

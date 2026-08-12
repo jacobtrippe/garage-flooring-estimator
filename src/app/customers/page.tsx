@@ -14,7 +14,7 @@ interface Estimate {
   pdfUrl?: string;
   estimatePdfUrl?: string;
   agreementPdfUrl?: string;
-  jobPhotoUrl?: string | null;
+  photos?: { id: string; url: string }[];
   customerSignedAt?: string | null;
   contractorSignatureDataUrl?: string | null;
 }
@@ -392,14 +392,19 @@ export default function Customers() {
                           className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50"
                         >
                           <div className="min-w-0 mr-2 flex items-center gap-2">
-                            {estimate.jobPhotoUrl && (
-                              <a href={estimate.jobPhotoUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                                <img
-                                  src={estimate.jobPhotoUrl}
-                                  alt="Job photo"
-                                  className="w-10 h-10 object-cover rounded border border-gray-200"
-                                />
-                              </a>
+                            {(estimate.photos ?? []).length > 0 && (
+                              <div className="flex gap-1 flex-shrink-0">
+                                {estimate.photos!.slice(0, 3).map(photo => (
+                                  <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer">
+                                    <img src={photo.url} alt="Job photo" className="w-10 h-10 object-cover rounded border border-gray-200" />
+                                  </a>
+                                ))}
+                                {estimate.photos!.length > 3 && (
+                                  <div className="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium">
+                                    +{estimate.photos!.length - 3}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             <div>
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -568,14 +573,19 @@ export default function Customers() {
                                     className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200"
                                   >
                                     <div className="min-w-0 mr-2 flex items-center gap-2">
-                                      {estimate.jobPhotoUrl && (
-                                        <a href={estimate.jobPhotoUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
-                                          <img
-                                            src={estimate.jobPhotoUrl}
-                                            alt="Job photo"
-                                            className="w-12 h-12 object-cover rounded border border-gray-200"
-                                          />
-                                        </a>
+                                      {(estimate.photos ?? []).length > 0 && (
+                                        <div className="flex gap-1 flex-shrink-0">
+                                          {estimate.photos!.slice(0, 3).map(photo => (
+                                            <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer">
+                                              <img src={photo.url} alt="Job photo" className="w-12 h-12 object-cover rounded border border-gray-200" />
+                                            </a>
+                                          ))}
+                                          {estimate.photos!.length > 3 && (
+                                            <div className="w-12 h-12 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium">
+                                              +{estimate.photos!.length - 3}
+                                            </div>
+                                          )}
+                                        </div>
                                       )}
                                       <div>
                                         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
