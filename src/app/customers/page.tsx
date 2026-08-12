@@ -42,6 +42,7 @@ interface Customer {
   garageSqft: number;
   carPorts: number;
   createdAt?: string;
+  estimates?: Estimate[];
 }
 
 function getEstimatePriority(e: Estimate): number {
@@ -111,17 +112,7 @@ export default function Customers() {
 
       const estimatesMap: Record<string, Estimate[]> = {};
       for (const customer of data) {
-        try {
-          const estRes = await fetch(`/api/estimates?customerId=${customer.id}`);
-          if (estRes.ok) {
-            const estimates = await estRes.json();
-            estimatesMap[customer.id] = sortEstimates(estimates);
-          } else {
-            console.error(`Failed to fetch estimates for ${customer.id}: ${estRes.status}`);
-          }
-        } catch (error) {
-          console.error(`Failed to fetch estimates for customer ${customer.id}:`, error);
-        }
+        estimatesMap[customer.id] = sortEstimates(customer.estimates ?? []);
       }
       setEstimatesByCustomerId(estimatesMap);
     } finally {
