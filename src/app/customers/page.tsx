@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,11 @@ interface Estimate {
   id: string;
   totalPrice: number;
   createdAt: string;
+  updatedAt: string;
+  status: string;
   pdfUrl?: string;
+  estimatePdfUrl?: string;
+  agreementPdfUrl?: string;
   customerSignedAt?: string | null;
   contractorSignatureDataUrl?: string | null;
 }
@@ -39,13 +43,44 @@ interface Customer {
   createdAt?: string;
 }
 
+function getEstimatePriority(e: Estimate): number {
+  if (e.contractorSignatureDataUrl) return 0;
+  if (e.customerSignedAt && !e.contractorSignatureDataUrl) return 1;
+  if (e.status === 'signed') return 2;
+  if (e.status === 'sent') return 3;
+  return 4;
+}
+
+function sortEstimates(estimates: Estimate[]): Estimate[] {
+  return [...estimates].sort((a, b) => {
+    const pa = getEstimatePriority(a);
+    const pb = getEstimatePriority(b);
+    if (pa !== pb) return pa - pb;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+}
+
+function getEstimateStatusInfo(e: Estimate): { label: string; bgColor: string; textColor: string } {
+  if (e.contractorSignatureDataUrl || e.status === 'signed') {
+    return { label: 'Signed', bgColor: '#D1FAE5', textColor: '#065F46' };
+  }
+  if (e.customerSignedAt) {
+    return { label: 'Awaiting Your Sig', bgColor: '#FEF3C7', textColor: '#92400E' };
+  }
+  if (e.status === 'sent') {
+    return { label: 'Sent', bgColor: '#DBEAFE', textColor: '#1E40AF' };
+  }
+  return { label: 'Draft', bgColor: '#F3F4F6', textColor: '#6B7280' };
+}
+
+function formatSummaryDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [estimatesByCustomerId, setEstimatesByCustomerId] = useState<
-    Record<string, Estimate[]>
-  >({});
+  const [estimatesByCustomerId, setEstimatesByCustomerId] = useState<Record<string, Estimate[]>>({});
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Customer | null>(null);
@@ -55,8 +90,6 @@ export default function Customers() {
   const [deletingCustomer, setDeletingCustomer] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
 
   useEffect(() => {
     fetchCustomers();
@@ -74,8 +107,7 @@ export default function Customers() {
           const estRes = await fetch(`/api/estimates?customerId=${customer.id}`);
           if (estRes.ok) {
             const estimates = await estRes.json();
-            console.log(`Estimates for ${customer.id}:`, estimates);
-            estimatesMap[customer.id] = estimates;
+            estimatesMap[customer.id] = sortEstimates(estimates);
           } else {
             console.error(`Failed to fetch estimates for ${customer.id}: ${estRes.status}`);
           }
@@ -83,7 +115,6 @@ export default function Customers() {
           console.error(`Failed to fetch estimates for customer ${customer.id}:`, error);
         }
       }
-      console.log("Final estimatesMap:", estimatesMap);
       setEstimatesByCustomerId(estimatesMap);
     } finally {
       setLoading(false);
@@ -92,10 +123,6 @@ export default function Customers() {
 
   const toggleEstimates = (customerId: string) => {
     setExpandedCustomerId(expandedCustomerId === customerId ? null : customerId);
-  };
-
-  const toggleDropdown = (customerId: string) => {
-    setOpenDropdownId(openDropdownId === customerId ? null : customerId);
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -176,19 +203,6 @@ export default function Customers() {
     );
   });
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdownId && dropdownRefs.current[openDropdownId]) {
-        if (!dropdownRefs.current[openDropdownId]?.contains(event.target as Node)) {
-          setOpenDropdownId(null);
-        }
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdownId]);
-
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
@@ -219,42 +233,72 @@ export default function Customers() {
         {/* Mobile Card List */}
         <div className="md:hidden space-y-3 mb-4">
           {filteredCustomers.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">{searchTerm ? 'No customers match your search' : 'No customers yet'}</p>
+            <p className="text-center text-gray-500 py-8">
+              {searchTerm ? 'No customers match your search' : 'No customers yet'}
+            </p>
           ) : filteredCustomers.map((customer) => {
             const estimates = estimatesByCustomerId[customer.id] || [];
-            const latestEstimate = estimates[0];
+            const priorityEstimate = estimates[0];
+            const isExpanded = expandedCustomerId === customer.id;
+            const hasWarning = estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl);
+
             return (
               <div key={customer.id} className="bg-white rounded-lg shadow-sm p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex-1 min-w-0 mr-2">
+                    <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
-                      {estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl) && <WarningBadge />}
+                      {hasWarning && <WarningBadge />}
                     </div>
-                    <p className="text-sm text-gray-600">{customer.phone}</p>
-                    <div className="flex gap-3 mt-1">
-                      <a href={`tel:${customer.phone}`} className="text-sm font-medium text-blue-600">Call</a>
-                      <a href={`sms:${customer.phone}`} className="text-sm font-medium text-green-600">Text</a>
-                    </div>
+                    {/* At-a-glance estimate summary */}
+                    {priorityEstimate && (() => {
+                      const { label, textColor } = getEstimateStatusInfo(priorityEstimate);
+                      return (
+                        <p className="text-xs" style={{ color: '#6B7280' }}>
+                          <span className="font-semibold" style={{ color: '#2f2f30' }}>
+                            ${priorityEstimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          {' · '}
+                          <span style={{ color: textColor }}>{label}</span>
+                          {' · '}
+                          {formatSummaryDate(priorityEstimate.updatedAt)}
+                        </p>
+                      );
+                    })()}
                   </div>
-                  <span className="text-xs text-gray-400">{estimates.length} estimate{estimates.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-gray-400 flex-shrink-0 pt-0.5">
+                    {estimates.length} estimate{estimates.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-600 mt-2">{customer.phone}</p>
+                <div className="flex gap-3 mt-1 mb-2">
+                  <a href={`tel:${customer.phone}`} className="text-sm font-medium text-blue-600">Call</a>
+                  <a href={`sms:${customer.phone}`} className="text-sm font-medium text-green-600">Text</a>
                 </div>
                 <p className="text-sm text-gray-500 mb-3">{customer.garageSqft} sqft · {customer.carPorts} car</p>
-                <div className="flex gap-2">
+
+                {/* Primary action buttons */}
+                <div className="flex gap-2 mb-2">
                   <button
                     onClick={() => handleEditCustomer(customer)}
-                    className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                    className="text-white py-2 px-3 rounded-md text-sm font-medium hover:opacity-90 transition flex-shrink-0"
                     style={{ backgroundColor: '#1B3A5C' }}
                   >
                     Edit
                   </button>
-                  {latestEstimate ? (
+                  {priorityEstimate ? (
                     <Link
-                      href={`/estimates/${latestEstimate.id}/edit`}
+                      href={`/estimates/${priorityEstimate.id}/edit`}
                       className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
-                      style={{ backgroundColor: '#1B3A5C' }}
+                      style={{
+                        backgroundColor: (priorityEstimate.contractorSignatureDataUrl || priorityEstimate.status === 'signed')
+                          ? '#059669'
+                          : '#1B3A5C'
+                      }}
                     >
-                      Estimate
+                      Open Estimate →
                     </Link>
                   ) : (
                     <Link
@@ -262,10 +306,67 @@ export default function Customers() {
                       className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
                       style={{ backgroundColor: '#059669' }}
                     >
-                      New Estimate
+                      + New Estimate
                     </Link>
                   )}
                 </div>
+
+                {/* Expand toggle — shown when at least one estimate exists */}
+                {estimates.length > 0 && (
+                  <button
+                    onClick={() => toggleEstimates(customer.id)}
+                    className="w-full text-left text-sm py-1.5 px-2 rounded hover:bg-gray-50 transition flex items-center justify-between"
+                    style={{ color: '#1B3A5C' }}
+                  >
+                    <span>{isExpanded ? '▲' : '▾'} All Estimates ({estimates.length})</span>
+                  </button>
+                )}
+
+                {/* Expanded estimate list */}
+                {isExpanded && (
+                  <div className="mt-2 space-y-2 border-t pt-3">
+                    {estimates.map((estimate, idx) => {
+                      const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
+                      return (
+                        <div
+                          key={estimate.id}
+                          className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50"
+                        >
+                          <div className="min-w-0 mr-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {idx === 0 && <span className="text-yellow-500 text-xs">★</span>}
+                              <span className="text-sm font-semibold text-gray-900">
+                                ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              <span
+                                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ backgroundColor: bgColor, color: textColor }}
+                              >
+                                {label}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
+                          </div>
+                          <Link
+                            href={`/estimates/${estimate.id}/edit`}
+                            className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0"
+                            style={{ backgroundColor: '#1B3A5C' }}
+                          >
+                            Open
+                          </Link>
+                        </div>
+                      );
+                    })}
+                    {/* Always-visible new estimate option */}
+                    <Link
+                      href={`/estimates/new?customer=${customer.id}`}
+                      className="block w-full text-center py-2 rounded-md text-sm font-semibold hover:opacity-90 transition border-2 border-dashed"
+                      style={{ color: '#059669', borderColor: '#059669' }}
+                    >
+                      + New Estimate
+                    </Link>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -274,204 +375,173 @@ export default function Customers() {
         {/* Desktop Table */}
         <div className="hidden md:block bg-white rounded-lg shadow-sm pb-64">
           <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="border-b" style={{ backgroundColor: '#F9FAFB', borderColor: '#e5e7eb' }}>
-              <tr>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Name</th>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Email</th>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Phone</th>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Sqft</th>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Car</th>
-                <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.length === 0 ? (
+            <table className="min-w-full">
+              <thead className="border-b" style={{ backgroundColor: '#F9FAFB', borderColor: '#e5e7eb' }}>
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    {searchTerm ? 'No customers match your search' : 'No customers yet'}
-                  </td>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Name</th>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Email</th>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Phone</th>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Sqft</th>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Car</th>
+                  <th className="px-6 py-3 text-left font-semibold" style={{ color: '#2f2f30' }}>Actions</th>
                 </tr>
-              ) : (
-                filteredCustomers.flatMap((customer) => {
-                  const estimates = estimatesByCustomerId[customer.id] || [];
-                  const isExpanded = expandedCustomerId === customer.id;
+              </thead>
+              <tbody>
+                {filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      {searchTerm ? 'No customers match your search' : 'No customers yet'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCustomers.flatMap((customer) => {
+                    const estimates = estimatesByCustomerId[customer.id] || [];
+                    const priorityEstimate = estimates[0];
+                    const isExpanded = expandedCustomerId === customer.id;
+                    const hasWarning = estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl);
 
-                  const rows = [
-                    <tr key={customer.id} className="border-b hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="flex items-center gap-2">
+                    const rows = [
+                      <tr key={customer.id} className="border-b hover:bg-gray-50">
+                        {/* Name cell — includes at-a-glance summary */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-start gap-2">
                             <p className="font-semibold text-gray-900">{customer.name}</p>
-                            {estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl) && <WarningBadge />}
+                            {hasWarning && <WarningBadge />}
                           </div>
+                          {priorityEstimate && (() => {
+                            const { label, textColor } = getEstimateStatusInfo(priorityEstimate);
+                            return (
+                              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                                <span className="font-semibold" style={{ color: '#2f2f30' }}>
+                                  ${priorityEstimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                {' · '}
+                                <span style={{ color: textColor }}>{label}</span>
+                                {' · '}
+                                {formatSummaryDate(priorityEstimate.updatedAt)}
+                              </p>
+                            );
+                          })()}
                           {customer.createdAt && (
-                            <div className="text-xs text-gray-500">
-                              <p>{new Date(customer.createdAt).toLocaleDateString()}</p>
-                              <p>{new Date(customer.createdAt).toLocaleTimeString()}</p>
-                            </div>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Added {new Date(customer.createdAt).toLocaleDateString()}
+                            </p>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{customer.email}</td>
-                      <td className="px-6 py-4">
-                        <div>{customer.phone}</div>
-                        <div className="flex gap-3 mt-1">
-                          <a href={`tel:${customer.phone}`} className="text-xs font-medium text-blue-600">Call</a>
-                          <a href={`sms:${customer.phone}`} className="text-xs font-medium text-green-600">Text</a>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{customer.garageSqft}</td>
-                      <td className="px-6 py-4">{customer.carPorts}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <button
-                            onClick={() => handleEditCustomer(customer)}
-                            className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                            style={{ backgroundColor: '#1B3A5C' }}
-                          >
-                            Edit
-                          </button>
-                          {estimates && estimates.length > 0 ? (
-                            <>
-                              {estimates[0].pdfUrl ? (
-                                <a
-                                  href={estimates[0].pdfUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                                  style={{ backgroundColor: '#1B3A5C' }}
-                                >
-                                  Signed Estimate
-                                </a>
-                              ) : (
-                                <Link
-                                  href={`/estimates/${estimates[0].id}/edit`}
-                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                                  style={{ backgroundColor: '#1B3A5C' }}
-                                >
-                                  Current Estimate
-                                </Link>
-                              )}
-
-                              <div className="relative inline-block" ref={(el) => { if (el) dropdownRefs.current[customer.id] = el; }}>
-                                <button
-                                  onClick={() => toggleDropdown(customer.id)}
-                                  className="text-white px-3 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                                  style={{ backgroundColor: '#C8C9CA', color: '#2f2f30' }}
-                                >
-                                  ({estimates.length})
-                                </button>
-
-                                {openDropdownId === customer.id && (
-                                  <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-56 max-h-64 overflow-y-auto">
-                                    <div className="px-4 py-2 text-xs font-semibold text-gray-600 border-b sticky top-0" style={{ backgroundColor: '#F9FAFB' }}>
-                                      Saved Estimates ({estimates.length})
-                                    </div>
-                                    {Array.isArray(estimates) && estimates.map((estimate: any, idx: number) => {
-                                      console.log("Rendering estimate:", estimate);
-                                      return (
-                                        <div key={estimate.id} className="border-b">
-                                          <Link
-                                            href={`/estimates/${estimate.id}/edit`}
-                                            className="block px-4 py-2 hover:opacity-75 text-sm"
-                                            style={{ color: '#2f2f30' }}
-                                          >
-                                            {idx === 0 && "★ "} ${(estimate.totalPrice || 0).toFixed(2)} • {new Date(estimate.createdAt).toLocaleDateString()}
-                                          </Link>
-                                          {estimate.pdfUrl && (
-                                            <a
-                                              href={estimate.pdfUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="block px-4 py-1 text-xs hover:opacity-75"
-                                              style={{ color: '#1B3A5C' }}
-                                            >
-                                              Download PDF
-                                            </a>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                    <div className="border-t"></div>
-
-                                    <Link
-                                      href={`/estimates/new?customer=${customer.id}`}
-                                      className="block px-4 py-2 text-sm font-semibold hover:opacity-90"
-                                      style={{ color: '#1B3A5C', backgroundColor: '#F9FAFB' }}
-                                    >
-                                      + New Estimate
-                                    </Link>
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <Link
-                              href={`/estimates/new?customer=${customer.id}`}
+                        </td>
+                        <td className="px-6 py-4">{customer.email}</td>
+                        <td className="px-6 py-4">
+                          <div>{customer.phone}</div>
+                          <div className="flex gap-3 mt-1">
+                            <a href={`tel:${customer.phone}`} className="text-xs font-medium text-blue-600">Call</a>
+                            <a href={`sms:${customer.phone}`} className="text-xs font-medium text-green-600">Text</a>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">{customer.garageSqft}</td>
+                        <td className="px-6 py-4">{customer.carPorts}</td>
+                        {/* Actions cell */}
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2 items-center flex-wrap">
+                            <button
+                              onClick={() => handleEditCustomer(customer)}
                               className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
                               style={{ backgroundColor: '#1B3A5C' }}
                             >
-                              New Estimate
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>,
-                  ];
-
-                  if (isExpanded && estimates.length > 0) {
-                    rows.push(
-                      <tr key={`${customer.id}-estimates`} className="bg-gray-50 border-b">
-                        <td colSpan={6} className="px-6 py-4">
-                          <div className="space-y-2">
-                            <h4 className="font-semibold text-gray-700 mb-3">
-                              Past Estimates ({estimates.length})
-                            </h4>
-                            <div className="space-y-2">
-                              {estimates.map((estimate) => (
-                                <div
-                                  key={estimate.id}
-                                  className="flex justify-between items-center p-3 bg-white rounded border border-gray-200"
+                              Edit
+                            </button>
+                            {priorityEstimate ? (
+                              <>
+                                <Link
+                                  href={`/estimates/${priorityEstimate.id}/edit`}
+                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                  style={{
+                                    backgroundColor: (priorityEstimate.contractorSignatureDataUrl || priorityEstimate.status === 'signed')
+                                      ? '#059669'
+                                      : '#1B3A5C'
+                                  }}
                                 >
-                                  <div>
-                                    <p className="font-semibold text-gray-900">
-                                      ${estimate.totalPrice.toFixed(2)}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {new Date(estimate.createdAt).toLocaleDateString()}
-                                    </p>
-                                    {estimate.pdfUrl && (
-                                      <a
-                                        href={estimate.pdfUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-green-600 hover:underline"
-                                      >
-                                        📄 Download PDF
-                                      </a>
-                                    )}
-                                  </div>
-                                  <Link
-                                    href={`/estimates/${estimate.id}/edit`}
-                                    className="text-blue-600 hover:underline"
-                                  >
-                                    Edit
-                                  </Link>
-                                </div>
-                              ))}
-                            </div>
+                                  Open Estimate →
+                                </Link>
+                                <button
+                                  onClick={() => toggleEstimates(customer.id)}
+                                  className="px-3 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                  style={{ backgroundColor: '#F3F4F6', color: '#374151' }}
+                                >
+                                  {isExpanded ? '▲' : '▾'} All ({estimates.length})
+                                </button>
+                              </>
+                            ) : (
+                              <Link
+                                href={`/estimates/new?customer=${customer.id}`}
+                                className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                style={{ backgroundColor: '#059669' }}
+                              >
+                                + New Estimate
+                              </Link>
+                            )}
                           </div>
                         </td>
-                      </tr>
-                    );
-                  }
+                      </tr>,
+                    ];
 
-                  return rows;
-                })
-              )}
-            </tbody>
-          </table>
+                    if (isExpanded) {
+                      rows.push(
+                        <tr key={`${customer.id}-estimates`} className="bg-gray-50 border-b">
+                          <td colSpan={6} className="px-6 py-4">
+                            <h4 className="font-semibold text-gray-700 mb-3">
+                              All Estimates ({estimates.length})
+                            </h4>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                              {estimates.map((estimate, idx) => {
+                                const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
+                                return (
+                                  <div
+                                    key={estimate.id}
+                                    className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200"
+                                  >
+                                    <div className="min-w-0 mr-2">
+                                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                        {idx === 0 && <span className="text-yellow-500 text-xs">★</span>}
+                                        <p className="font-semibold text-gray-900 text-sm">
+                                          ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </p>
+                                        <span
+                                          className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                          style={{ backgroundColor: bgColor, color: textColor }}
+                                        >
+                                          {label}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-gray-500">{formatSummaryDate(estimate.updatedAt)}</p>
+                                    </div>
+                                    <Link
+                                      href={`/estimates/${estimate.id}/edit`}
+                                      className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0"
+                                      style={{ backgroundColor: '#1B3A5C' }}
+                                    >
+                                      Open
+                                    </Link>
+                                  </div>
+                                );
+                              })}
+                              {/* New estimate card */}
+                              <Link
+                                href={`/estimates/new?customer=${customer.id}`}
+                                className="flex items-center justify-center p-3 rounded-md border-2 border-dashed text-sm font-semibold hover:opacity-90 transition"
+                                style={{ color: '#059669', borderColor: '#059669', backgroundColor: '#F0FDF4' }}
+                              >
+                                + New Estimate
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return rows;
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
