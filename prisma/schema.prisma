@@ -8,88 +8,89 @@ datasource db {
 }
 
 model Customer {
-  id        String     @id @default(cuid())
-  name      String
-  phone     String
-  email     String
-  street    String
-  city      String
-  state     String
-  zip       String
+  id         String     @id @default(cuid())
+  name       String
+  phone      String
+  email      String
+  street     String
+  city       String
+  state      String
+  zip        String
   garageSqft Float
-  carPorts  Int
-  notes     String     @default("")
-  estimates Estimate[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  carPorts   Int
+  notes      String     @default("")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  estimates  Estimate[]
 }
 
 model Estimate {
   id                         String         @id @default(cuid())
   customerId                 String
-  customer                   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items                      EstimateItem[]
   totalPrice                 Float
   status                     String         @default("draft")
-  quoteType                  String         @default("interior")
-  exteriorSqft               Float?
-  approvedDiscount           Float          @default(0)
   signatureDataUrl           String?
-  contractorSignatureDataUrl String?
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
   pdfUrl                     String?
-  estimatePdfUrl             String?
-  agreementPdfUrl            String?
   installationDate           String?
+  exteriorSqft               Float?
+  quoteType                  String         @default("interior")
+  approvedDiscount           Float          @default(0)
+  contractorSignatureDataUrl String?
   signatureToken             String?        @unique
   signatureTokenExpiresAt    DateTime?
   customerSignedAt           DateTime?
-  createdAt                  DateTime       @default(now())
-  updatedAt                  DateTime       @updatedAt
+  agreementPdfUrl            String?
+  estimatePdfUrl             String?
+  jobPhotoUrl                String?
+  customer                   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items                      EstimateItem[]
 }
 
 model EstimateItem {
-  id        String   @id @default(cuid())
+  id         String   @id @default(cuid())
   estimateId String
-  estimate  Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name      String
-  price     Float
+  productId  String
+  price      Float
+  name       String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model Section {
   id           String    @id @default(cuid())
   title        String
   displayOrder Int
-  category     String    @default("interior")
-  products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  category     String    @default("interior")
+  products     Product[]
 }
 
 model Product {
   id            String         @id @default(cuid())
   sectionId     String
-  section       Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   name          String
   pricingType   String
   price         Float
   isActive      Boolean        @default(true)
   displayOrder  Int
-  estimateItems EstimateItem[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  estimateItems EstimateItem[]
+  section       Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 }
 
 model PlatinumInquiry {
-  id            String   @id @default(cuid())
-  firstName     String
-  lastName      String
-  phone         String
-  projectType   String
-  garageSize    String
-  coatingSystem String?
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  phone          String
+  projectType    String
+  garageSize     String
+  coatingSystem  String?
   projectDetails String?
-  address       String?
-  createdAt     DateTime @default(now())
+  address        String?
+  createdAt      DateTime @default(now())
 }

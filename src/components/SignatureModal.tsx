@@ -41,6 +41,8 @@ interface SignatureModalProps {
   preSignedSignatureDataUrl?: string;
   installationDate?: string;
   approvedDiscount?: number;
+  jobPhotoUrl?: string;
+  onPhotoSaved?: (url: string) => void;
 }
 
 export default function SignatureModal({
@@ -56,16 +58,25 @@ export default function SignatureModal({
   preSignedSignatureDataUrl,
   installationDate = '',
   approvedDiscount = 0,
+  jobPhotoUrl: initialJobPhotoUrl,
+  onPhotoSaved,
 }: SignatureModalProps) {
   const customerSignaturePadRef = useRef<SignatureCanvas>(null);
   const contractorSignaturePadRef = useRef<SignatureCanvas>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const libraryInputRef = useRef<HTMLInputElement>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(preSignedSignatureDataUrl || null);
   const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dateInput, setDateInput] = useState<string>(installationDate || '');
-  const [step, setStep] = useState<'date' | 'customer-sign' | 'contractor-sign'>(preSignedSignatureDataUrl ? 'contractor-sign' : 'date');
+  const [step, setStep] = useState<'photo' | 'date' | 'customer-sign' | 'contractor-sign'>(
+    preSignedSignatureDataUrl ? 'contractor-sign' : initialJobPhotoUrl ? 'date' : 'photo'
+  );
   const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(initialJobPhotoUrl || null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (installationDate && !dateInput) {
@@ -320,6 +331,127 @@ export default function SignatureModal({
     setSignatureDataUrl(null);
     onClose();
   };
+
+  const handlePhotoSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handlePhotoUpload = async () => {
+    if (!photoFile) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', photoFile);
+      const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        alert('Failed to upload photo. Please try again.');
+        setUploadingPhoto(false);
+        return;
+      }
+      const { jobPhotoUrl } = await res.json();
+      if (onPhotoSaved) onPhotoSaved(jobPhotoUrl);
+      setUploadingPhoto(false);
+      setStep('date');
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      alert('Error uploading photo');
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Step 0: Job Photo
+  if (step === 'photo') {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
+        <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Add a Job Photo</h2>
+            <button onClick={handleClose} className="text-gray-300 hover:text-white text-3xl">×</button>
+          </div>
+
+          <div className="p-8">
+            <p className="text-gray-600 mb-6">Required before sending to the customer.</p>
+
+            {/* Hidden file inputs */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePhotoSelected}
+            />
+            <input
+              ref={libraryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoSelected}
+            />
+
+            {!photoPreviewUrl ? (
+              <div className="flex flex-col gap-3 mb-6">
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full py-3 rounded-lg font-semibold text-white hover:opacity-90 transition"
+                  style={{ backgroundColor: '#1B3A5C' }}
+                >
+                  📷 Take Photo
+                </button>
+                <button
+                  onClick={() => libraryInputRef.current?.click()}
+                  className="w-full py-3 rounded-lg font-semibold border-2 hover:bg-gray-50 transition"
+                  style={{ borderColor: '#1B3A5C', color: '#1B3A5C' }}
+                >
+                  🖼️ Choose from Library
+                </button>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <img
+                  src={photoPreviewUrl}
+                  alt="Job site preview"
+                  className="w-full max-h-56 object-cover rounded-lg border border-gray-200 mb-3"
+                />
+                <button
+                  onClick={() => {
+                    setPhotoFile(null);
+                    setPhotoPreviewUrl(null);
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Retake
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleClose}
+                className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePhotoUpload}
+                disabled={!photoFile || uploadingPhoto}
+                className="flex-1 text-white px-4 py-2 rounded font-semibold hover:opacity-90 transition disabled:opacity-50"
+                style={{ backgroundColor: '#059669' }}
+              >
+                {uploadingPhoto ? 'Uploading…' : 'Upload & Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Step 1: Date Selection / Send Without Signature
   if (step === 'date') {

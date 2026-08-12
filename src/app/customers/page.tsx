@@ -14,6 +14,7 @@ interface Estimate {
   pdfUrl?: string;
   estimatePdfUrl?: string;
   agreementPdfUrl?: string;
+  jobPhotoUrl?: string | null;
   customerSignedAt?: string | null;
   contractorSignatureDataUrl?: string | null;
 }
@@ -383,27 +384,37 @@ export default function Customers() {
                 {/* Expanded estimate list */}
                 {isExpanded && (
                   <div className="mt-2 space-y-2 border-t pt-3">
-                    {estimates.map((estimate, idx) => {
+                    {estimates.map((estimate) => {
                       const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
                       return (
                         <div
                           key={estimate.id}
                           className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50"
                         >
-                          <div className="min-w-0 mr-2">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {idx === 0 && <span className="text-yellow-500 text-xs">★</span>}
-                              <span className="text-sm font-semibold text-gray-900">
-                                ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                              <span
-                                className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ backgroundColor: bgColor, color: textColor }}
-                              >
-                                {label}
-                              </span>
+                          <div className="min-w-0 mr-2 flex items-center gap-2">
+                            {estimate.jobPhotoUrl && (
+                              <a href={estimate.jobPhotoUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                <img
+                                  src={estimate.jobPhotoUrl}
+                                  alt="Job photo"
+                                  className="w-10 h-10 object-cover rounded border border-gray-200"
+                                />
+                              </a>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-sm font-semibold text-gray-900">
+                                  ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                  style={{ backgroundColor: bgColor, color: textColor }}
+                                >
+                                  {label}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
                             </div>
-                            <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
                           </div>
                           <Link
                             href={`/estimates/${estimate.id}/edit`}
@@ -549,27 +560,37 @@ export default function Customers() {
                               All Estimates ({estimates.length})
                             </h4>
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                              {estimates.map((estimate, idx) => {
+                              {estimates.map((estimate) => {
                                 const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
                                 return (
                                   <div
                                     key={estimate.id}
                                     className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200"
                                   >
-                                    <div className="min-w-0 mr-2">
-                                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                        {idx === 0 && <span className="text-yellow-500 text-xs">★</span>}
-                                        <p className="font-semibold text-gray-900 text-sm">
-                                          ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </p>
-                                        <span
-                                          className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                          style={{ backgroundColor: bgColor, color: textColor }}
-                                        >
-                                          {label}
-                                        </span>
+                                    <div className="min-w-0 mr-2 flex items-center gap-2">
+                                      {estimate.jobPhotoUrl && (
+                                        <a href={estimate.jobPhotoUrl} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                                          <img
+                                            src={estimate.jobPhotoUrl}
+                                            alt="Job photo"
+                                            className="w-12 h-12 object-cover rounded border border-gray-200"
+                                          />
+                                        </a>
+                                      )}
+                                      <div>
+                                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                          <p className="font-semibold text-gray-900 text-sm">
+                                            ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </p>
+                                          <span
+                                            className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                                            style={{ backgroundColor: bgColor, color: textColor }}
+                                          >
+                                            {label}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500">{formatSummaryDate(estimate.updatedAt)}</p>
                                       </div>
-                                      <p className="text-xs text-gray-500">{formatSummaryDate(estimate.updatedAt)}</p>
                                     </div>
                                     <Link
                                       href={`/estimates/${estimate.id}/edit`}

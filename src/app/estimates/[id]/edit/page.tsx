@@ -67,6 +67,7 @@ interface Estimate {
   approvedDiscount: number;
   installationDate?: string;
   signatureDataUrl?: string;
+  jobPhotoUrl?: string | null;
 }
 
 type QuoteType = "interior" | "exterior" | "both";
@@ -87,6 +88,7 @@ export default function EstimateEditor() {
   const [remoteSigningUrl, setRemoteSigningUrl] = useState<string>('');
   const [preSignedSignatureDataUrl, setPreSignedSignatureDataUrl] = useState<string | undefined>();
   const [installationDate, setInstallationDate] = useState<string>('');
+  const [jobPhotoUrl, setJobPhotoUrl] = useState<string | undefined>();
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
@@ -144,6 +146,9 @@ export default function EstimateEditor() {
       }
       if (estimate.signatureDataUrl) {
         setPreSignedSignatureDataUrl(estimate.signatureDataUrl);
+      }
+      if (estimate.jobPhotoUrl) {
+        setJobPhotoUrl(estimate.jobPhotoUrl);
       }
 
       const res2 = await fetch(`/api/customers/${estimate.customerId}`);
@@ -778,7 +783,13 @@ export default function EstimateEditor() {
                   </button>
 
                   <button
-                    onClick={() => setShowRemoteSignModal(true)}
+                    onClick={() => {
+                      if (!jobPhotoUrl) {
+                        alert('Add a job photo first — click "Generate PDF & Sign" to add one.');
+                        return;
+                      }
+                      setShowRemoteSignModal(true);
+                    }}
                     className="w-full text-white py-3 rounded-md font-semibold hover:opacity-90 transition"
                     style={{ backgroundColor: '#059669' }}
                   >
@@ -818,6 +829,8 @@ export default function EstimateEditor() {
           preSignedSignatureDataUrl={preSignedSignatureDataUrl}
           installationDate={installationDate}
           approvedDiscount={approvedDiscount}
+          jobPhotoUrl={jobPhotoUrl}
+          onPhotoSaved={(url) => setJobPhotoUrl(url)}
         />
       )}
 
