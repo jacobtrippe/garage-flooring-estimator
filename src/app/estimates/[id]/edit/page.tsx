@@ -347,12 +347,24 @@ export default function EstimateEditor() {
       .reduce((sum, i) => sum + i.totalPrice, 0);
 
     // Pass 2: apply PERCENT items
-    return pass1.map((item) => {
+    const pass2 = pass1.map((item) => {
       if (item.pricingType !== "PERCENT") return item;
       const product = allProducts.find((p) => p.id === item.productId);
       if (!product) return item;
       return { ...item, totalPrice: baseSubtotal * (product.price / 100) };
     });
+
+    // Auto-surcharge: spread $200 evenly across selected PER_SQFT items
+    const perSqftCount = pass2.filter((i) => i.pricingType === "PER_SQFT").length;
+    if (perSqftCount > 0) {
+      const surchargePerItem = 200 / perSqftCount;
+      return pass2.map((item) =>
+        item.pricingType === "PER_SQFT"
+          ? { ...item, totalPrice: item.totalPrice + surchargePerItem }
+          : item
+      );
+    }
+    return pass2;
   };
 
   const handleProductToggle = (product: Product) => {
