@@ -333,6 +333,34 @@ export default function SignatureModal({
     onClose();
   };
 
+  const compressImage = (file: File, maxWidth = 1920, quality = 0.82): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error('Canvas compression failed'))),
+            'image/jpeg',
+            quality
+          );
+        };
+        img.src = ev.target!.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
@@ -341,8 +369,10 @@ export default function SignatureModal({
     setUploadingPhoto(true);
     for (const file of files) {
       try {
+        // Compress before upload — iPhone photos can be 8–12 MB; Vercel's limit is 4.5 MB
+        const compressed = await compressImage(file);
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', compressed, 'photo.jpg');
         const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, {
           method: 'POST',
           body: formData,
