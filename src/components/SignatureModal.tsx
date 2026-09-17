@@ -2,18 +2,9 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import dynamic from 'next/dynamic';
 import EstimatePDF from './EstimatePDF';
 import ServiceAgreementPDF from './ServiceAgreementPDF';
 import { pdf } from '@react-pdf/renderer';
-
-const PDFViewer = dynamic(() => import('@react-pdf/renderer').then((mod) => mod.PDFViewer), {
-  ssr: false,
-});
-
-const PDFDownloadLink = dynamic(() => import('@react-pdf/renderer').then((mod) => mod.PDFDownloadLink), {
-  ssr: false,
-});
 
 interface SignatureModalProps {
   isOpen: boolean;
@@ -46,6 +37,19 @@ interface SignatureModalProps {
   onPhotoRemoved?: (photoId: string) => void;
 }
 
+type Step = 'photo' | 'date' | 'estimate-review' | 'agreement-review' | 'customer-sign' | 'contractor-sign';
+
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 export default function SignatureModal({
   isOpen,
   onClose,
@@ -53,7 +57,7 @@ export default function SignatureModal({
   items,
   totalPrice,
   estimateId,
-  quoteType = "interior",
+  quoteType = 'interior',
   exteriorSqft,
   itemCategories,
   preSignedSignatureDataUrl,
@@ -68,14 +72,12 @@ export default function SignatureModal({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const libraryInputRef = useRef<HTMLInputElement>(null);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(preSignedSignatureDataUrl || null);
-  const [contractorSignatureDataUrl, setContractorSignatureDataUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dateInput, setDateInput] = useState<string>(installationDate || '');
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>(initialJobPhotos ?? []);
-  const [step, setStep] = useState<'photo' | 'date' | 'customer-sign' | 'contractor-sign'>(
+  const [step, setStep] = useState<Step>(
     preSignedSignatureDataUrl ? 'contractor-sign' : (initialJobPhotos ?? []).length > 0 ? 'date' : 'photo'
   );
-  const [activeTab, setActiveTab] = useState<'estimate' | 'agreement'>('estimate');
   const [sendWithoutSignature, setSendWithoutSignature] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -88,249 +90,128 @@ export default function SignatureModal({
   if (!isOpen) return null;
 
   const today = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    year: 'numeric', month: 'long', day: 'numeric',
   });
+
+  const docTitle =
+    quoteType === 'exterior' ? 'Exterior Concrete Sealer Proposal' :
+    quoteType === 'both' ? 'Floor Coating & Sealer Proposal' :
+    'Garage Floor Proposal';
+
+  // ── Business logic (unchanged) ──────────────────────────────────────────
 
   const handleSendWithoutSignature = async () => {
     setSaving(true);
     try {
-      // Update estimate status to sent (without signature)
       const res = await fetch(`/api/estimates/${estimateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'sent',
-        }),
+        body: JSON.stringify({ status: 'sent' }),
       });
+      if (!res.ok) { setSaving(false); alert('Failed to update estimate'); return; }
 
-      if (!res.ok) {
-        console.error('Failed to update estimate:', res.status);
-        setSaving(false);
-        alert('Failed to update estimate');
-        return;
-      }
-
-      // Generate Estimate PDF without signature
-      const estimatePdf = pdf(
+      const estimatePdfBlob = await pdf(
         <EstimatePDF
-          customer={customer}
-          items={items}
-          totalPrice={totalPrice}
-          signatureDataUrl={undefined}
-          estimateId={estimateId}
-          date={today}
-          quoteType={quoteType}
-          exteriorSqft={exteriorSqft}
-          itemCategories={itemCategories}
-          approvedDiscount={approvedDiscount}
+          customer={customer} items={items} totalPrice={totalPrice}
+          estimateId={estimateId} date={today} quoteType={quoteType}
+          exteriorSqft={exteriorSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
-      );
+      ).toBlob();
 
-      const estimatePdfBlob = await estimatePdf.toBlob();
-
-      // Upload PDF to Supabase Storage
       const estimateFormData = new FormData();
       estimateFormData.append('file', estimatePdfBlob, `Estimate-${estimateId.slice(-8)}.pdf`);
       estimateFormData.append('type', 'estimate');
+      const uploadRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, { method: 'POST', body: estimateFormData });
+      if (!uploadRes.ok) { setSaving(false); alert('Failed to upload PDF'); return; }
 
-      const uploadEstimateRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
-        method: 'POST',
-        body: estimateFormData,
-      });
-
-      if (!uploadEstimateRes.ok) {
-        console.error('Failed to upload Estimate PDF:', uploadEstimateRes.status);
-        setSaving(false);
-        alert('Failed to upload PDF');
-        return;
-      }
-
-      // Send email with PDF link
-      const sendRes = await fetch(`/api/estimates/${estimateId}/send-pdf`, {
-        method: 'POST',
-      });
-
-      if (!sendRes.ok) {
-        console.error('Failed to send email:', sendRes.status);
-        setSaving(false);
-        alert('PDF uploaded, but failed to send email');
-        return;
-      }
+      const sendRes = await fetch(`/api/estimates/${estimateId}/send-pdf`, { method: 'POST' });
+      if (!sendRes.ok) { setSaving(false); alert('PDF uploaded, but failed to send email'); return; }
 
       setSaving(false);
       alert('Estimate sent to customer!');
       onClose();
-    } catch (error) {
-      console.error('Error sending estimate:', error);
+    } catch {
       setSaving(false);
       alert('Error sending estimate');
     }
   };
 
-  const handleDateSubmit = () => {
-    if (!dateInput) {
-      alert('Please select an installation date');
-      return;
-    }
-    setStep('customer-sign');
-  };
-
-  const handleClearCustomerSignature = () => {
-    if (customerSignaturePadRef.current) {
-      customerSignaturePadRef.current.clear();
-    }
-  };
-
-  const handleClearContractorSignature = () => {
-    if (contractorSignaturePadRef.current) {
-      contractorSignaturePadRef.current.clear();
-    }
-  };
-
   const handleCustomerSignatureConfirm = async () => {
-    if (!customerSignaturePadRef.current) return;
-
-    const isEmpty = customerSignaturePadRef.current.isEmpty();
-    if (isEmpty) {
+    if (!customerSignaturePadRef.current || customerSignaturePadRef.current.isEmpty()) {
       alert('Please provide a signature');
       return;
     }
-
-    const sig = customerSignaturePadRef.current.toDataURL();
-    setSignatureDataUrl(sig);
+    setSignatureDataUrl(customerSignaturePadRef.current.toDataURL());
     setStep('contractor-sign');
   };
 
   const handleContractorSignatureConfirm = async () => {
-    if (!contractorSignaturePadRef.current) return;
-
-    const isEmpty = contractorSignaturePadRef.current.isEmpty();
-    if (isEmpty) {
+    if (!contractorSignaturePadRef.current || contractorSignaturePadRef.current.isEmpty()) {
       alert('Please provide a signature');
       return;
     }
-
     setSaving(true);
     try {
       const contractorSig = contractorSignaturePadRef.current.toDataURL();
-      setContractorSignatureDataUrl(contractorSig);
+      const finalDate = dateInput || installationDate;
 
-      // Save both signatures and installation date to database
-      const finalInstallationDate = dateInput || installationDate;
       const res = await fetch(`/api/estimates/${estimateId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          signatureDataUrl: signatureDataUrl,
-          contractorSignatureDataUrl: contractorSig,
-          status: 'signed',
-          installationDate: finalInstallationDate,
+          signatureDataUrl, contractorSignatureDataUrl: contractorSig,
+          status: 'signed', installationDate: finalDate,
         }),
       });
-
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Failed to save signature:', res.status, errorData);
+        const err = await res.json().catch(() => ({}));
         setSaving(false);
-        alert(`Failed to save signature: ${errorData.error || res.statusText}`);
+        alert(`Failed to save signature: ${err.error || res.statusText}`);
         return;
       }
 
-      // Fetch the updated estimate to ensure we have the correct installation date
       const fetchRes = await fetch(`/api/estimates/${estimateId}`);
-      const { estimate: updatedEstimate } = await fetchRes.json();
-      const savedInstallationDate = updatedEstimate?.installationDate || finalInstallationDate;
+      const { estimate: updated } = await fetchRes.json();
+      const savedDate = updated?.installationDate || finalDate;
 
-      // Generate Estimate PDF with customer signature
-      const estimatePdf = pdf(
+      const estimatePdfBlob = await pdf(
         <EstimatePDF
-          customer={customer}
-          items={items}
-          totalPrice={totalPrice}
+          customer={customer} items={items} totalPrice={totalPrice}
           signatureDataUrl={signatureDataUrl || undefined}
-          estimateId={estimateId}
-          date={today}
-          quoteType={quoteType}
-          exteriorSqft={exteriorSqft}
-          itemCategories={itemCategories}
-          approvedDiscount={approvedDiscount}
+          estimateId={estimateId} date={today} quoteType={quoteType}
+          exteriorSqft={exteriorSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
-      );
+      ).toBlob();
 
-      const estimatePdfBlob = await estimatePdf.toBlob();
-
-      // Generate Agreement PDF with both signatures
-      const agreementPdf = pdf(
+      const agreementPdfBlob = await pdf(
         <ServiceAgreementPDF
-          customer={customer}
-          totalPrice={totalPrice}
-          installationDate={savedInstallationDate}
+          customer={customer} totalPrice={totalPrice} installationDate={savedDate}
           signatureDataUrl={signatureDataUrl || undefined}
-          contractorSignatureDataUrl={contractorSig}
-          date={today}
+          contractorSignatureDataUrl={contractorSig} date={today}
         />
-      );
+      ).toBlob();
 
-      const agreementPdfBlob = await agreementPdf.toBlob();
+      const ef = new FormData();
+      ef.append('file', estimatePdfBlob, `Estimate-${estimateId.slice(-8)}.pdf`);
+      ef.append('type', 'estimate');
+      const er = await fetch(`/api/estimates/${estimateId}/upload-pdf`, { method: 'POST', body: ef });
+      if (!er.ok) { setSaving(false); alert('Signature saved, but failed to upload Estimate PDF'); return; }
 
-      // Upload both PDFs to Supabase Storage
-      const estimateFormData = new FormData();
-      estimateFormData.append('file', estimatePdfBlob, `Estimate-${estimateId.slice(-8)}.pdf`);
-      estimateFormData.append('type', 'estimate');
+      const af = new FormData();
+      af.append('file', agreementPdfBlob, `ServiceAgreement-${estimateId.slice(-8)}.pdf`);
+      af.append('type', 'agreement');
+      await fetch(`/api/estimates/${estimateId}/upload-pdf`, { method: 'POST', body: af });
 
-      const uploadEstimateRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
-        method: 'POST',
-        body: estimateFormData,
-      });
-
-      if (!uploadEstimateRes.ok) {
-        console.error('Failed to upload Estimate PDF:', uploadEstimateRes.status);
-        setSaving(false);
-        alert('Signature saved, but failed to upload Estimate PDF');
-        return;
-      }
-
-      const agreementFormData = new FormData();
-      agreementFormData.append('file', agreementPdfBlob, `ServiceAgreement-${estimateId.slice(-8)}.pdf`);
-      agreementFormData.append('type', 'agreement');
-
-      const uploadAgreementRes = await fetch(`/api/estimates/${estimateId}/upload-pdf`, {
-        method: 'POST',
-        body: agreementFormData,
-      });
-
-      if (!uploadAgreementRes.ok) {
-        console.error('Failed to upload Agreement PDF:', uploadAgreementRes.status);
-        // Continue anyway, estimate was uploaded
-      }
-
-      // Send email with PDF links
-      const sendRes = await fetch(`/api/estimates/${estimateId}/send-pdf`, {
-        method: 'POST',
-      });
-
-      if (!sendRes.ok) {
-        console.error('Failed to send email:', sendRes.status);
-        setSaving(false);
-        alert('PDFs uploaded, but failed to send email');
-        return;
-      }
+      const sendRes = await fetch(`/api/estimates/${estimateId}/send-pdf`, { method: 'POST' });
+      if (!sendRes.ok) { setSaving(false); alert('PDFs uploaded, but failed to send email'); return; }
 
       setSaving(false);
       alert('Estimate and Agreement signed by both parties and sent to customer!');
       onClose();
-    } catch (error) {
-      console.error('Error processing signature:', error);
+    } catch {
       setSaving(false);
       alert('Error processing signature');
     }
-  };
-
-  const handleClose = () => {
-    setSignatureDataUrl(null);
-    onClose();
   };
 
   const compressImage = (file: File, maxWidth = 1920, quality = 0.82): Promise<Blob> =>
@@ -342,18 +223,13 @@ export default function SignatureModal({
         img.onerror = reject;
         img.onload = () => {
           let { width, height } = img;
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          }
+          if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; }
           const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
+          canvas.width = width; canvas.height = height;
           canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
           canvas.toBlob(
-            (blob) => (blob ? resolve(blob) : reject(new Error('Canvas compression failed'))),
-            'image/jpeg',
-            quality
+            (blob) => (blob ? resolve(blob) : reject(new Error('Compression failed'))),
+            'image/jpeg', quality
           );
         };
         img.src = ev.target!.result as string;
@@ -364,28 +240,19 @@ export default function SignatureModal({
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    // Reset input so the same file can be re-selected after removal
     e.target.value = '';
     setUploadingPhoto(true);
     for (const file of files) {
       try {
-        // Compress before upload — iPhone photos can be 8–12 MB; Vercel's limit is 4.5 MB
         const compressed = await compressImage(file);
         const formData = new FormData();
         formData.append('file', compressed, 'photo.jpg');
-        const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          alert('Failed to upload one or more photos. Please try again.');
-          continue;
-        }
+        const res = await fetch(`/api/estimates/${estimateId}/upload-photo`, { method: 'POST', body: formData });
+        if (!res.ok) { alert('Failed to upload one or more photos. Please try again.'); continue; }
         const { photo } = await res.json();
         setPhotos(prev => [...prev, photo]);
         if (onPhotoAdded) onPhotoAdded(photo);
-      } catch (error) {
-        console.error('Photo upload error:', error);
+      } catch {
         alert('Error uploading photo');
       }
     }
@@ -397,439 +264,424 @@ export default function SignatureModal({
       await fetch(`/api/estimates/${estimateId}/photos/${photoId}`, { method: 'DELETE' });
       setPhotos(prev => prev.filter(p => p.id !== photoId));
       if (onPhotoRemoved) onPhotoRemoved(photoId);
-    } catch (error) {
-      console.error('Delete photo error:', error);
+    } catch {
+      console.error('Delete photo error');
     }
   };
 
-  // Step 0: Job Photos
+  const handleClose = () => { setSignatureDataUrl(null); onClose(); };
+
+  // ── Shared shell ────────────────────────────────────────────────────────
+
+  const Shell = ({ children, title, onBack }: { children: React.ReactNode; title: string; onBack?: () => void }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex flex-col">
+      <div className="bg-[#2f2f30] px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button onClick={onBack} className="text-gray-400 hover:text-white text-lg leading-none">←</button>
+          )}
+          <div>
+            <div className="text-white font-bold text-sm tracking-widest">PLATINUM INSTALLS</div>
+            <div className="text-gray-400 text-xs mt-0.5">{title}</div>
+          </div>
+        </div>
+        <button onClick={handleClose} className="text-gray-400 hover:text-white text-2xl leading-none">×</button>
+      </div>
+      <div className="flex-1 overflow-y-auto bg-gray-100">
+        {children}
+      </div>
+    </div>
+  );
+
+  // ── Step: photo ─────────────────────────────────────────────────────────
+
   if (step === 'photo') {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-screen overflow-y-auto">
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Job Photos</h2>
-            <button onClick={handleClose} className="text-gray-300 hover:text-white text-3xl">×</button>
-          </div>
+      <Shell title="Job Photos">
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <p className="text-sm text-gray-500 mb-4">Add at least one job site photo before proceeding.</p>
 
-          <div className="p-6">
-            <p className="text-gray-600 mb-4 text-sm">Add at least one photo before sending to the customer.</p>
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFilesSelected} />
+            <input ref={libraryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFilesSelected} />
 
-            {/* Hidden file inputs */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleFilesSelected}
-            />
-            <input
-              ref={libraryInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleFilesSelected}
-            />
-
-            {/* Photo grid */}
             {photos.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {photos.map(photo => (
                   <div key={photo.id} className="relative">
-                    <img
-                      src={photo.url}
-                      alt="Job site"
-                      className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                    />
+                    <img src={photo.url} alt="Job site" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
                     <button
                       onClick={() => handleDeletePhoto(photo.id)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center hover:bg-red-600 transition leading-none"
-                    >
-                      ×
-                    </button>
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center hover:bg-red-600"
+                    >×</button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Upload spinner */}
-            {uploadingPhoto && (
-              <p className="text-sm text-gray-500 mb-3">Uploading…</p>
-            )}
+            {uploadingPhoto && <p className="text-sm text-gray-400 mb-3">Uploading…</p>}
 
-            {/* Add photo buttons */}
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2">
               <button
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-white hover:opacity-90 transition disabled:opacity-50 text-sm"
-                style={{ backgroundColor: '#1B3A5C' }}
-              >
-                📷 Take Photo
-              </button>
+                className="flex-1 py-3 rounded-xl font-semibold text-white text-sm bg-[#2f2f30] hover:bg-gray-800 disabled:opacity-50"
+              >Take Photo</button>
               <button
                 onClick={() => libraryInputRef.current?.click()}
                 disabled={uploadingPhoto}
-                className="flex-1 py-2.5 rounded-lg font-semibold border-2 hover:bg-gray-50 transition disabled:opacity-50 text-sm"
-                style={{ borderColor: '#1B3A5C', color: '#1B3A5C' }}
-              >
-                🖼️ Library
-              </button>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleClose}
-                className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setStep('date')}
-                disabled={photos.length === 0 || uploadingPhoto}
-                className="flex-1 text-white px-4 py-2 rounded font-semibold hover:opacity-90 transition disabled:opacity-50"
-                style={{ backgroundColor: '#059669' }}
-              >
-                Continue ({photos.length} photo{photos.length !== 1 ? 's' : ''})
-              </button>
+                className="flex-1 py-3 rounded-xl font-semibold text-sm border-2 border-[#2f2f30] text-[#2f2f30] hover:bg-gray-50 disabled:opacity-50"
+              >Library</button>
             </div>
           </div>
+
+          <button
+            onClick={() => setStep('date')}
+            disabled={photos.length === 0 || uploadingPhoto}
+            className="w-full bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm disabled:opacity-40"
+          >
+            Continue ({photos.length} photo{photos.length !== 1 ? 's' : ''}) →
+          </button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // Step 1: Date Selection / Send Without Signature
+  // ── Step: date ──────────────────────────────────────────────────────────
+
   if (step === 'date') {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center">
-            <h2 className="text-2xl font-bold">{sendWithoutSignature ? 'Send Estimate' : 'Confirm Installation Date'}</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-300 hover:text-white text-3xl"
-            >
-              ×
-            </button>
+      <Shell title="Installation Date" onBack={() => setStep('photo')}>
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          {!sendWithoutSignature ? (
+            <>
+              <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Scheduled Date</div>
+                  <input
+                    type="date"
+                    value={dateInput}
+                    onChange={(e) => setDateInput(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 font-semibold focus:border-gray-800 focus:outline-none"
+                  />
+                </div>
+                <label className="flex items-center gap-3 cursor-pointer pt-2 border-t border-gray-100">
+                  <input
+                    type="checkbox"
+                    checked={sendWithoutSignature}
+                    onChange={(e) => setSendWithoutSignature(e.target.checked)}
+                    className="w-5 h-5 accent-gray-800"
+                  />
+                  <span className="text-sm text-gray-600">Send estimate without signature</span>
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setStep('photo')} className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-sm">← Back</button>
+                <button
+                  onClick={() => { if (!dateInput) { alert('Please select an installation date'); return; } setStep('estimate-review'); }}
+                  className="flex-[2] bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm"
+                >Review Estimate →</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <p className="text-sm text-gray-500 mb-3">This will send the estimate to the customer without requesting a signature.</p>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-0.5">Sending to</div>
+                  <div className="font-semibold text-gray-900 text-sm">{customer.email}</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setSendWithoutSignature(false)} className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-sm">← Back</button>
+                <button
+                  onClick={handleSendWithoutSignature}
+                  disabled={saving}
+                  className="flex-[2] bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm disabled:opacity-50"
+                >{saving ? 'Sending…' : 'Send Estimate'}</button>
+              </div>
+            </>
+          )}
+        </div>
+      </Shell>
+    );
+  }
+
+  // ── Step: estimate-review ───────────────────────────────────────────────
+
+  if (step === 'estimate-review') {
+    const interiorItems = quoteType === 'both'
+      ? items.filter((i) => (itemCategories?.[i.productId] ?? 'interior') !== 'exterior')
+      : items;
+    const exteriorItems = quoteType === 'both'
+      ? items.filter((i) => itemCategories?.[i.productId] === 'exterior')
+      : [];
+
+    return (
+      <Shell title="Review Estimate" onBack={() => setStep('date')}>
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+
+          {/* Proposal header */}
+          <div className="bg-[#2f2f30] rounded-xl p-5 text-white">
+            <div className="text-xs text-gray-400 tracking-widest uppercase mb-1">Proposal</div>
+            <div className="text-xl font-bold">{docTitle}</div>
+            <div className="text-gray-400 text-xs mt-1">#{estimateId.slice(-8).toUpperCase()} · {today}</div>
           </div>
 
-          <div className="p-8">
-            {!sendWithoutSignature ? (
+          {/* Customer info */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Prepared For</div>
+            <div className="font-semibold text-gray-900">{customer.name}</div>
+            <div className="text-sm text-gray-500 mt-1 space-y-0.5">
+              <div>{customer.street}</div>
+              <div>{customer.city}, {customer.state} {customer.zip}</div>
+              <div>{customer.phone}</div>
+              <div>{customer.email}</div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
+              <span className="text-gray-400">Scheduled Install: </span>
+              <span className="font-medium text-gray-800">{formatDate(dateInput)}</span>
+            </div>
+          </div>
+
+          {/* Scope */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Scope of Work</div>
+            {quoteType === 'exterior' ? (
+              <ul className="text-sm text-gray-600 space-y-1.5">
+                {['Professional surface cleaning and degreasing','Concrete preparation and inspection','Siliconate penetrating sealer application','Siloxane water-repellent topcoat','Edge and joint detailing'].map(s => (
+                  <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>
+                ))}
+              </ul>
+            ) : quoteType === 'both' ? (
               <>
-                <p className="text-gray-600 mb-6">When will the installation take place?</p>
-                <input
-                  type="date"
-                  value={dateInput}
-                  onChange={(e) => setDateInput(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-6 text-gray-900 font-semibold"
-                />
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendWithoutSignature}
-                      onChange={(e) => setSendWithoutSignature(e.target.checked)}
-                      className="w-5 h-5 accent-blue-600"
-                    />
-                    <span className="text-sm text-gray-900 font-medium">Send estimate without signature</span>
-                  </label>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleClose}
-                    className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDateSubmit}
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
-                  >
-                    Continue
-                  </button>
-                </div>
+                <div className="text-xs font-semibold text-gray-700 mb-1">Interior — Garage Floor Coating</div>
+                <ul className="text-sm text-gray-600 space-y-1 mb-3">
+                  {['Diamond grinding surface prep','Epoxy base coat','Polyaspartic top coat'].map(s => (
+                    <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>
+                  ))}
+                </ul>
+                <div className="text-xs font-semibold text-gray-700 mb-1">Exterior — Concrete Sealing</div>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  {['Surface cleaning and preparation','Siliconate penetrating sealer','Siloxane water-repellent topcoat'].map(s => (
+                    <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>
+                  ))}
+                </ul>
               </>
             ) : (
-              <>
-                <p className="text-gray-600 mb-6">This will send the estimate to {customer.email} without requesting a signature.</p>
-                <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded-lg mb-6">
-                  <p className="text-sm text-blue-900 font-medium">Ready to send estimate to:</p>
-                  <p className="text-sm text-blue-700 font-semibold mt-1">{customer.email}</p>
+              <ul className="text-sm text-gray-600 space-y-1.5">
+                {['Diamond grinding surface prep','Crack and joint repair (as needed)','Epoxy base coat','Decorative flake broadcast','Polyaspartic top coat','Clean edge work and detail finishing'].map(s => (
+                  <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Line items */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="px-5 pt-5 pb-2">
+              <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Services</div>
+            </div>
+            {quoteType === 'both' && (
+              <div className="px-5 py-1.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide border-y border-gray-100">Interior</div>
+            )}
+            <div className="divide-y divide-gray-100">
+              {interiorItems.map((item) => (
+                <div key={item.productId} className="flex justify-between items-center px-5 py-3">
+                  <span className="text-sm text-gray-700">{item.name}</span>
+                  <span className={`text-sm font-medium tabular-nums ${item.totalPrice < 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                    {item.totalPrice === 0 ? '' : item.totalPrice < 0 ? `-$${Math.abs(item.totalPrice).toFixed(2)}` : `$${item.totalPrice.toFixed(2)}`}
+                  </span>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setSendWithoutSignature(false)}
-                    className="flex-1 bg-gray-300 text-gray-900 px-4 py-2 rounded font-semibold hover:bg-gray-400 transition"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleSendWithoutSignature}
-                    disabled={saving}
-                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
-                  >
-                    {saving ? 'Sending...' : 'Send Estimate'}
-                  </button>
+              ))}
+            </div>
+            {quoteType === 'both' && exteriorItems.length > 0 && (
+              <>
+                <div className="px-5 py-1.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide border-y border-gray-100">Exterior</div>
+                <div className="divide-y divide-gray-100">
+                  {exteriorItems.map((item) => (
+                    <div key={item.productId} className="flex justify-between items-center px-5 py-3">
+                      <span className="text-sm text-gray-700">{item.name}</span>
+                      <span className="text-sm font-medium tabular-nums text-gray-900">
+                        {item.totalPrice === 0 ? '' : `$${item.totalPrice.toFixed(2)}`}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
+            <div className="flex justify-between items-center px-5 py-4 border-t-2 border-gray-900">
+              <span className="font-bold text-gray-900 text-sm uppercase tracking-wide">Total</span>
+              <span className="text-2xl font-bold text-gray-900 tabular-nums">${totalPrice.toFixed(2)}</span>
+            </div>
           </div>
+
+          {/* Payment */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Payment Schedule</div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Deposit to schedule</span>
+                <span className="font-semibold text-gray-900 tabular-nums">${(totalPrice / 2).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Balance due at completion</span>
+                <span className="font-semibold text-gray-900 tabular-nums">${(totalPrice / 2).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <button onClick={() => setStep('agreement-review')} className="w-full bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm">
+            Review Service Agreement →
+          </button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // Step 2: Customer Signature
+  // ── Step: agreement-review ──────────────────────────────────────────────
+
+  if (step === 'agreement-review') {
+    return (
+      <Shell title="Service Agreement" onBack={() => setStep('estimate-review')}>
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-center border-b border-gray-200 pb-4 mb-4">
+              <div className="font-bold text-gray-900 tracking-wider">PLATINUM INSTALLS</div>
+              <div className="text-xs text-gray-400 mt-1 uppercase tracking-widest">Service Agreement</div>
+            </div>
+
+            <div className="space-y-2 mb-4 text-sm">
+              {([
+                ['Customer Name', customer.name],
+                ['Service Address', customer.street],
+                ['City, State, ZIP', `${customer.city}, ${customer.state} ${customer.zip}`],
+                ['Phone / Email', `${customer.phone} / ${customer.email}`],
+                ['Scheduled Installation Date', formatDate(dateInput)],
+              ] as [string, string][]).map(([label, value]) => (
+                <div key={label} className="flex gap-3 items-end pb-1 border-b border-gray-100">
+                  <span className="text-gray-400 text-xs font-medium w-44 shrink-0">{label}</span>
+                  <span className="text-gray-800 text-xs flex-1">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-4 mt-5">
+              {[
+                { num: 1, title: 'Scope of Work', text: 'Platinum Installs ("Contractor") agrees to provide professional epoxy flooring installation services as described in the approved estimate. Work may include surface preparation, base coat application, flake broadcast, and topcoat sealing.' },
+                { num: 2, title: 'Materials & Workmanship', text: 'All materials used are premium-grade and applied according to manufacturer specifications. Contractor guarantees professional, workmanlike performance with a promise to repair any failures due to improper installation up to, but not beyond, 15 years after the date of installation for interior coatings and 7 years after the date of installation for exterior coatings. The Contractor will honor the chosen limited warranties for material, covering peeling, delamination, or coating failure under normal residential use.' },
+                { num: 3, title: 'Customer Responsibilities', text: 'Customer agrees to: ensure the work space is clean, empty, and accessible, with the exception that the Contractor agrees to move specified objects before installation; provide power and water; avoid foot traffic for 24 hours and vehicle traffic for 72 hours. A $200 delay fee applies if the work space is not ready on installation day. Failure to meet these conditions may delay the project or void warranty coverage.' },
+                { num: 4, title: 'Payment Terms', text: `Contract Total: $${totalPrice.toFixed(2)}. A 50% deposit secures scheduling, balance due upon completion. Accepted payments: cash, check, or electronic transfer. Late payments over 5 days may incur a 5% fee.` },
+                { num: 5, title: 'Change Orders', text: 'Any additional work requested beyond the original scope must be approved in writing and may adjust pricing or schedule.' },
+                { num: 6, title: 'Warranty Exclusions', text: 'Warranty excludes damage caused by structural movement, water intrusion, hydrostatic pressure, chemical spills, or customer negligence.' },
+                { num: 7, title: 'Liability', text: "Contractor carries full liability coverage. Customer agrees that Contractor's liability shall not exceed total contract price." },
+                { num: 8, title: 'Cancellation', text: 'Cancellations within 48 hours of the scheduled service date may result in forfeiture of the deposit due to material and scheduling costs.' },
+                { num: 9, title: 'Pre-Existing Substrate Conditions', text: "Contractor is not responsible for coating failures caused by defects in the existing concrete substrate, including but not limited to: inadequate concrete mix design, improper curing, settlement or structural cracking, excessive moisture or hydrostatic pressure, or workmanship deficiencies from prior contractors. Customer acknowledges that concrete coatings are dependent on the integrity of the underlying concrete, and that pre-existing substrate deficiencies may cause delamination, cracking, or adhesion failure that are outside the Contractor's control and are not covered under any warranty or guarantee provided by Platinum Installs. If substrate issues are discovered during surface preparation, Contractor will notify Customer before proceeding; additional remediation work, if agreed upon, will be documented as a change order." },
+              ].map(({ num, title, text }) => (
+                <div key={num} className="flex gap-3">
+                  <div className="text-xs font-bold text-gray-400 w-5 shrink-0 pt-0.5">{num}.</div>
+                  <div>
+                    <div className="text-xs font-bold text-gray-900 mb-1">{title}</div>
+                    <div className="text-xs text-gray-600 leading-relaxed">{text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button onClick={() => setStep('estimate-review')} className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-sm">← Back</button>
+            <button onClick={() => setStep('customer-sign')} className="flex-[2] bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm">Customer Signs →</button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ── Step: customer-sign ─────────────────────────────────────────────────
+
   if (step === 'customer-sign') {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-        <div className="bg-white rounded-lg shadow-lg w-screen h-screen flex flex-col">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center shrink-0">
-            <h2 className="text-2xl font-bold">Customer Signature</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-300 hover:text-white text-3xl"
-            >
-              ×
+      <Shell title="Customer Signature" onBack={() => setStep('agreement-review')}>
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Signing as</div>
+            <div className="font-semibold text-gray-900">{customer.name}</div>
+            <div className="text-sm text-gray-500">${totalPrice.toFixed(2)} total · {formatDate(dateInput)}</div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs text-gray-500 leading-relaxed mb-4">
+              By signing below, the customer agrees to the Platinum Installs Service Agreement and authorizes the work described in the estimate.
+            </div>
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Customer Signature</div>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 cursor-crosshair" style={{ touchAction: 'none' }}>
+              <SignatureCanvas
+                ref={customerSignaturePadRef}
+                canvasProps={{ style: { width: '100%', height: '180px', display: 'block' } }}
+                backgroundColor="rgb(249,250,251)"
+                penColor="#2f2f30"
+              />
+            </div>
+            <button onClick={() => customerSignaturePadRef.current?.clear()} className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline">
+              Clear signature
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-            {/* Tab Buttons */}
-            <div className="flex gap-2 px-4 md:px-8 py-3 border-b-2 border-gray-300 bg-gray-50 shrink-0">
-              <button
-                onClick={() => setActiveTab('estimate')}
-                className={`px-6 py-2 rounded font-semibold transition ${
-                  activeTab === 'estimate'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                }`}
-              >
-                Estimate
-              </button>
-              <button
-                onClick={() => setActiveTab('agreement')}
-                className={`px-6 py-2 rounded font-semibold transition ${
-                  activeTab === 'agreement'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                }`}
-              >
-                Service Agreement
-              </button>
-            </div>
-
-            {/* PDF Preview */}
-            <div className="flex-1 bg-gray-50 border-2 border-gray-300 m-2 rounded-lg overflow-hidden min-h-0">
-              <style>{`
-                .pdf-viewer-fill {
-                  width: 100% !important;
-                  height: 100% !important;
-                  overflow: hidden !important;
-                }
-                .pdf-viewer-fill iframe {
-                  width: 100% !important;
-                  height: 100% !important;
-                }
-                .pdf-viewer-fill ::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
-              <div className="pdf-viewer-fill w-full h-full">
-                <PDFViewer>
-                  {activeTab === 'estimate' ? (
-                    <EstimatePDF
-                      customer={customer}
-                      items={items}
-                      totalPrice={totalPrice}
-                      signatureDataUrl={signatureDataUrl || undefined}
-                      estimateId={estimateId}
-                      date={today}
-                      quoteType={quoteType}
-                      exteriorSqft={exteriorSqft}
-                      itemCategories={itemCategories}
-                      approvedDiscount={approvedDiscount}
-                    />
-                  ) : (
-                    <ServiceAgreementPDF
-                      customer={customer}
-                      totalPrice={totalPrice}
-                      installationDate={dateInput}
-                      signatureDataUrl={signatureDataUrl || undefined}
-                      date={today}
-                    />
-                  )}
-                </PDFViewer>
-              </div>
-            </div>
-
-            {/* Signature Section */}
-            <div className="p-4 md:p-8 bg-white border-t-2 border-gray-300 shrink-0">
-              <div className="flex flex-col md:flex-row gap-4 max-w-4xl">
-                {/* Signature Pad */}
-                <div className="flex-1 flex flex-col">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Customer Signature</h3>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '160px' }}>
-                    <SignatureCanvas
-                      ref={customerSignaturePadRef}
-                      canvasProps={{
-                        style: {
-                          width: '100%',
-                          height: '100%',
-                          cursor: 'crosshair',
-                        },
-                      }}
-                      penColor="#2f2f30"
-                      backgroundColor="#ffffff"
-                    />
-                  </div>
-                </div>
-
-                {/* Info & Buttons */}
-                <div className="w-full md:w-80 flex flex-col justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">{customer.name}</p>
-                    <p className="text-sm text-gray-600 mb-1">Installation: {dateInput || installationDate}</p>
-                    <p className="text-sm text-gray-600 mb-3">Signed: {today}</p>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-                      <p className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 mt-4">
-                    <button
-                      onClick={handleClearCustomerSignature}
-                      className="w-full bg-gray-300 text-gray-900 px-4 py-3 rounded font-semibold hover:bg-gray-400 transition"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={handleCustomerSignatureConfirm}
-                      className="w-full bg-blue-600 text-white px-4 py-3 rounded font-semibold hover:bg-blue-700 transition"
-                    >
-                      Customer Signed - Contractor Signs Next
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex gap-3">
+            <button onClick={() => setStep('agreement-review')} className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-sm">← Back</button>
+            <button onClick={handleCustomerSignatureConfirm} className="flex-[2] bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm">
+              Confirm & Contractor Signs →
+            </button>
           </div>
         </div>
-      </div>
+      </Shell>
     );
   }
 
-  // Step 3: Contractor Signature
+  // ── Step: contractor-sign ───────────────────────────────────────────────
+
   if (step === 'contractor-sign') {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-        <div className="bg-white rounded-lg shadow-lg w-screen h-screen flex flex-col">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-8 py-4 flex justify-between items-center shrink-0">
-            <div>
-              <h2 className="text-2xl font-bold">Contractor Signature</h2>
-              {preSignedSignatureDataUrl && <p className="text-sm text-green-200 mt-1">✓ Customer signed remotely on {installationDate ? new Date(installationDate).toLocaleDateString() : 'agreement'}</p>}
+      <Shell title="Contractor Signature">
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          {preSignedSignatureDataUrl && (
+            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+              Customer signed remotely — add your signature to complete the agreement.
             </div>
-            <button
-              onClick={handleClose}
-              className="text-gray-300 hover:text-white text-3xl"
-            >
-              ×
+          )}
+
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Signing as</div>
+            <div className="font-semibold text-gray-900">Platinum Installs</div>
+            <div className="text-sm text-gray-500">${totalPrice.toFixed(2)} total · {formatDate(dateInput || installationDate)}</div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Contractor Signature</div>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 cursor-crosshair" style={{ touchAction: 'none' }}>
+              <SignatureCanvas
+                ref={contractorSignaturePadRef}
+                canvasProps={{ style: { width: '100%', height: '180px', display: 'block' } }}
+                backgroundColor="rgb(249,250,251)"
+                penColor="#2f2f30"
+              />
+            </div>
+            <button onClick={() => contractorSignaturePadRef.current?.clear()} className="mt-2 text-xs text-gray-400 hover:text-gray-600 underline">
+              Clear signature
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex flex-1 flex-col min-h-0 overflow-y-auto">
-            {/* PDF Preview - Agreement Only */}
-            <div className="bg-gray-50 border-2 border-gray-300 m-2 rounded-lg overflow-hidden" style={{ minHeight: '200px', height: '40vh' }}>
-              <style>{`
-                .pdf-viewer-fill {
-                  width: 100% !important;
-                  height: 100% !important;
-                  overflow: hidden !important;
-                }
-                .pdf-viewer-fill iframe {
-                  width: 100% !important;
-                  height: 100% !important;
-                }
-                .pdf-viewer-fill ::-webkit-scrollbar {
-                  display: none;
-                }
-              `}</style>
-              <div className="pdf-viewer-fill w-full h-full">
-                <PDFViewer>
-                  <ServiceAgreementPDF
-                    customer={customer}
-                    totalPrice={totalPrice}
-                    installationDate={dateInput}
-                    signatureDataUrl={signatureDataUrl || undefined}
-                    date={today}
-                  />
-                </PDFViewer>
-              </div>
-            </div>
-
-            {/* Signature Section */}
-            <div className="p-4 md:p-8 pb-10 md:pb-8 bg-white border-t-2 border-gray-300 overflow-y-auto">
-              <div className="flex flex-col md:flex-row gap-4 max-w-4xl">
-                {/* Signature Pad */}
-                <div className="flex-1 flex flex-col">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Contractor Signature</h3>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white" style={{ height: '160px' }}>
-                    <SignatureCanvas
-                      ref={contractorSignaturePadRef}
-                      canvasProps={{
-                        style: {
-                          width: '100%',
-                          height: '100%',
-                          cursor: 'crosshair',
-                        },
-                      }}
-                      penColor="#2f2f30"
-                      backgroundColor="#ffffff"
-                    />
-                  </div>
-                </div>
-
-                {/* Info & Buttons */}
-                <div className="w-full md:w-80 flex flex-col justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 mb-1">Platinum Installs</p>
-                    <p className="text-sm text-gray-600 mb-1">Installation: {dateInput || installationDate}</p>
-                    <p className="text-sm text-gray-600 mb-3">Date: {today}</p>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-1">Total Amount</p>
-                      <p className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 mt-4">
-                    <button
-                      onClick={handleClearContractorSignature}
-                      className="w-full bg-gray-300 text-gray-900 px-4 py-3 rounded font-semibold hover:bg-gray-400 transition"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={handleContractorSignatureConfirm}
-                      disabled={saving}
-                      className="w-full bg-green-600 text-white px-4 py-3 rounded font-semibold hover:bg-green-700 transition disabled:bg-gray-400"
-                    >
-                      {saving ? 'Sending...' : 'Sign & Send Both Documents'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={handleContractorSignatureConfirm}
+            disabled={saving}
+            className="w-full bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm disabled:opacity-50"
+          >
+            {saving ? 'Saving & Sending…' : 'Sign & Send Both Documents'}
+          </button>
         </div>
-      </div>
+      </Shell>
     );
   }
 
