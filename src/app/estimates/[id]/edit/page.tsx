@@ -857,17 +857,25 @@ export default function EstimateEditor() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-              <h2 className="text-xl font-bold text-white">✓ Signing Link Ready</h2>
+              <h2 className="text-xl font-bold text-white">Email Sent</h2>
             </div>
 
             <div className="p-6 space-y-4">
               <p className="text-gray-700">
-                The signing link has been generated for <strong>{customer.name}</strong>. Share this link via email, text, or however you prefer.
+                A signing link was emailed to <strong>{customer?.email}</strong>. They can open it on any device to review and sign.
               </p>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-xs text-gray-600 mb-2 font-semibold">SIGNING LINK (expires in 14 days):</p>
-                <div className="flex gap-2">
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700">
+                <ul className="space-y-1 text-xs list-disc list-inside">
+                  <li>They can sign from any device</li>
+                  <li>You'll get an SMS when they sign</li>
+                  <li>Then complete the process by signing from the app</li>
+                </ul>
+              </div>
+
+              <details className="text-sm">
+                <summary className="text-gray-500 cursor-pointer select-none">Copy link (if email doesn't arrive)</summary>
+                <div className="flex gap-2 mt-2">
                   <input
                     type="text"
                     readOnly
@@ -884,17 +892,7 @@ export default function EstimateEditor() {
                     Copy
                   </button>
                 </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700">
-                <p className="font-semibold mb-2">Next steps:</p>
-                <ul className="space-y-1 text-xs list-disc list-inside">
-                  <li>Send the link to {customer.email}</li>
-                  <li>They can sign from any device</li>
-                  <li>You'll get an SMS when they sign</li>
-                  <li>Then complete the process by signing from the app</li>
-                </ul>
-              </div>
+              </details>
 
               <button
                 onClick={() => {
