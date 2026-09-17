@@ -18,7 +18,7 @@ interface EstimateData {
   items: Array<{
     productId: string;
     name: string;
-    totalPrice: number;
+    price: number;
   }>;
   totalPrice: number;
   quoteType: string;
@@ -301,8 +301,8 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
               {estimate.items.map((item) => (
                 <div key={item.productId} className="flex justify-between items-center px-5 py-3">
                   <span className="text-sm text-gray-700">{item.name}</span>
-                  <span className={`text-sm font-medium tabular-nums ${item.totalPrice < 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                    {item.totalPrice === 0 ? '' : item.totalPrice < 0 ? `-$${Math.abs(item.totalPrice).toFixed(2)}` : `$${item.totalPrice.toFixed(2)}`}
+                  <span className={`text-sm font-medium tabular-nums ${item.price < 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                    {item.price === 0 ? '' : item.price < 0 ? `-$${Math.abs(item.price).toFixed(2)}` : `$${item.price.toFixed(2)}`}
                   </span>
                 </div>
               ))}
