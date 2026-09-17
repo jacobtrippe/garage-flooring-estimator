@@ -13,7 +13,7 @@ export async function POST(
 
     const estimate = await prisma.estimate.findUnique({
       where: { id },
-      include: { customer: true },
+      include: { customer: true, items: { select: { price: true } } },
     });
 
     if (!estimate) {
@@ -27,6 +27,9 @@ export async function POST(
     if (!estimate.estimatePdfUrl && !estimate.agreementPdfUrl && !estimate.pdfUrl) {
       return NextResponse.json({ error: 'PDF not ready' }, { status: 400 });
     }
+
+    // Sum items for the email total — more reliable than estimate.totalPrice which can be stale
+    const emailTotal = estimate.items.reduce((sum, i) => sum + i.price, 0);
 
     if (!resend) {
       return NextResponse.json(
@@ -98,7 +101,7 @@ export async function POST(
           <p>Your estimate and service agreement are ready! Both documents are attached to this email.</p>
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 0; font-size: 14px; color: #666;">Total Amount</p>
-            <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; color: #2f2f30;">$${estimate.totalPrice.toFixed(2)}</p>
+            <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; color: #2f2f30;">$${emailTotal.toFixed(2)}</p>
           </div>
           <div style="margin: 20px 0; padding: 15px; background-color: #e8f4f8; border-left: 4px solid #0066cc; border-radius: 4px;">
             <p style="margin: 0; font-size: 14px; color: #003366; font-weight: bold;">Documents included:</p>
