@@ -303,9 +303,17 @@ export function EstimatesNewContent() {
       return { ...correctedItem, totalPrice: calculatePrice(product) };
     });
 
-    // Compute base subtotal (sum of non-PERCENT items)
+    // Compute base subtotal: interior coating items only (excludes exterior, warranties, storage)
     const baseSubtotal = pass1
-      .filter((i) => i.pricingType !== "PERCENT")
+      .filter((i) => {
+        if (i.pricingType === "PERCENT") return false;
+        const product = allProducts.find((p) => p.id === i.productId);
+        const section = sections.find((s) => s.id === product?.sectionId);
+        if (!section) return true;
+        if (section.category === "exterior") return false;
+        if (section.title === "Interior Warranty" || section.title === "Additional Storage") return false;
+        return true;
+      })
       .reduce((sum, i) => sum + i.totalPrice, 0);
 
     // Pass 2: apply PERCENT items
