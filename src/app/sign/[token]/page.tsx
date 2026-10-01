@@ -175,7 +175,7 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
   const docTitle =
     estimate.quoteType === 'exterior' ? 'Exterior Concrete Sealer Proposal' :
     estimate.quoteType === 'both' ? 'Floor Coating & Sealer Proposal' :
-    'Garage Floor Proposal';
+    'Platinum Installs Proposal';
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 

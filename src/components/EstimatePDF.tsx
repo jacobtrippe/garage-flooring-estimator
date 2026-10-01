@@ -320,7 +320,7 @@ export default function EstimatePDF({
       ? "Exterior Concrete Sealer Proposal"
       : quoteType === "both"
       ? "Floor Coating & Sealer Proposal"
-      : "Garage Floor Proposal";
+      : "Platinum Installs Proposal";
 
   return (
     <Document>

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Garage Flooring Estimator",
-  description: "Professional estimating tool for garage flooring",
+  title: "Platinum Installs Proposal",
+  description: "Professional proposal tool for Platinum Installs",
 };
 
 export default function RootLayout({

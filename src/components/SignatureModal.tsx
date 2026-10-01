@@ -96,7 +96,7 @@ export default function SignatureModal({
   const docTitle =
     quoteType === 'exterior' ? 'Exterior Concrete Sealer Proposal' :
     quoteType === 'both' ? 'Floor Coating & Sealer Proposal' :
-    'Garage Floor Proposal';
+    'Platinum Installs Proposal';
 
   // ── Business logic (unchanged) ──────────────────────────────────────────
 
