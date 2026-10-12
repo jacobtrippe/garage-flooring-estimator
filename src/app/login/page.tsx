@@ -8,6 +8,7 @@ import Image from "next/image";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // email field is used as username internally
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -58,10 +59,10 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: '#2f2f30' }}>
-              Email
+              Username
             </label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
