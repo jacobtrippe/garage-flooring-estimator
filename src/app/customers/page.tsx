@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import ProjectProgressPanel from "@/components/ProjectProgressPanel";
 
 interface Estimate {
   id: string;
+  customerId?: string;
   totalPrice: number;
   createdAt: string;
   updatedAt: string;
@@ -15,8 +17,23 @@ interface Estimate {
   estimatePdfUrl?: string;
   agreementPdfUrl?: string;
   photos?: { id: string; url: string }[];
+  items?: { id: string; name: string; price: number; product?: { section?: { title?: string } } }[];
   customerSignedAt?: string | null;
   contractorSignatureDataUrl?: string | null;
+  quoteType?: string;
+  installationDate?: string | null;
+  downPaymentReceived?: boolean;
+  downPaymentReceivedAt?: string | null;
+  flakeType?: string | null;
+  colorChosen?: string | null;
+  topCoatType?: string | null;
+  sealerType?: string | null;
+  storageRequired?: boolean;
+  storageNotes?: string | null;
+  materialsPurchased?: boolean;
+  projectCompleted?: boolean;
+  projectCompletedAt?: string | null;
+  finalPaymentCollected?: boolean;
 }
 
 const WarningBadge = () => (
@@ -41,8 +58,13 @@ interface Customer {
   phone: string;
   garageSqft: number;
   carPorts: number;
+  priority: boolean;
   createdAt?: string;
   estimates?: Estimate[];
+}
+
+function isProjectComplete(e: Estimate): boolean {
+  return isCompleted(e);
 }
 
 function getEstimatePriority(e: Estimate): number {
@@ -79,17 +101,22 @@ function formatSummaryDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-type Tab = 'active' | 'signed' | 'no-estimates' | 'all';
+type Tab = 'active' | 'signed' | 'completed' | 'no-estimates' | 'all';
 
 function isFullySigned(e: Estimate): boolean {
   return !!(e.contractorSignatureDataUrl || e.status === 'signed');
+}
+
+function isCompleted(e: Estimate): boolean {
+  return isFullySigned(e) && !!e.finalPaymentCollected;
 }
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [estimatesByCustomerId, setEstimatesByCustomerId] = useState<Record<string, Estimate[]>>({});
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('active');
+  const [expandedProjectCustomerId, setExpandedProjectCustomerId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('signed');
   const [loading, setLoading] = useState(true);
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Customer | null>(null);
@@ -101,8 +128,14 @@ export default function Customers() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+    if (status === 'authenticated') {
+      fetchCustomers();
+    }
+  }, [status]);
 
   const fetchCustomers = async () => {
     try {
@@ -122,6 +155,10 @@ export default function Customers() {
 
   const toggleEstimates = (customerId: string) => {
     setExpandedCustomerId(expandedCustomerId === customerId ? null : customerId);
+  };
+
+  const toggleProjectProgress = (customerId: string) => {
+    setExpandedProjectCustomerId(expandedProjectCustomerId === customerId ? null : customerId);
   };
 
   const handleEditCustomer = (customer: Customer) => {
@@ -190,6 +227,35 @@ export default function Customers() {
     }
   };
 
+  const handleTogglePriority = async (customer: Customer) => {
+    const newPriority = !customer.priority;
+    setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, priority: newPriority } : c));
+    await fetch(`/api/customers/${customer.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: newPriority }),
+    });
+  };
+
+  const handleProjectUpdate = (updated: Estimate) => {
+    setEstimatesByCustomerId(prev => ({
+      ...prev,
+      [updated.customerId!]: (prev[updated.customerId!] || []).map(e =>
+        e.id === updated.id ? { ...updated, items: e.items, photos: e.photos } : e
+      ),
+    }));
+  };
+
+  const makePhotosChangeHandler = (estimateId: string, customerId: string) =>
+    (photos: { id: string; url: string }[]) => {
+      setEstimatesByCustomerId(prev => ({
+        ...prev,
+        [customerId]: (prev[customerId] || []).map(e =>
+          e.id === estimateId ? { ...e, photos } : e
+        ),
+      }));
+    };
+
   const filteredCustomers = customers.filter((customer) => {
     const search = searchTerm.toLowerCase();
     return (
@@ -210,7 +276,11 @@ export default function Customers() {
     }).length,
     signed: filteredCustomers.filter(c => {
       const ests = estimatesByCustomerId[c.id] || [];
-      return ests.length > 0 && isFullySigned(ests[0]);
+      return ests.length > 0 && isFullySigned(ests[0]) && !isCompleted(ests[0]);
+    }).length,
+    completed: filteredCustomers.filter(c => {
+      const ests = estimatesByCustomerId[c.id] || [];
+      return ests.length > 0 && isCompleted(ests[0]);
     }).length,
     'no-estimates': filteredCustomers.filter(c => (estimatesByCustomerId[c.id] || []).length === 0).length,
     all: filteredCustomers.length,
@@ -221,14 +291,19 @@ export default function Customers() {
     const ests = estimatesByCustomerId[c.id] || [];
     if (activeTab === 'all')          return true;
     if (activeTab === 'no-estimates') return ests.length === 0;
-    if (activeTab === 'signed')       return ests.length > 0 && isFullySigned(ests[0]);
+    if (activeTab === 'signed')       return ests.length > 0 && isFullySigned(ests[0]) && !isCompleted(ests[0]);
+    if (activeTab === 'completed')    return ests.length > 0 && isCompleted(ests[0]);
     if (activeTab === 'active')       return ests.length > 0 && !isFullySigned(ests[0]);
     return true;
   });
 
+  const priorityCustomers = activeTab === 'active' ? displayCustomers.filter(c => c.priority) : [];
+  const nonPriorityCustomers = activeTab === 'active' ? displayCustomers.filter(c => !c.priority) : displayCustomers;
+
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     setExpandedCustomerId(null);
+    setExpandedProjectCustomerId(null);
   };
 
   if (loading) return <div className="p-8">Loading...</div>;
@@ -261,8 +336,9 @@ export default function Customers() {
         {/* Tab bar */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {([
-            { key: 'active',       label: 'Active' },
             { key: 'signed',       label: 'Signed' },
+            { key: 'active',       label: 'Active' },
+            { key: 'completed',    label: 'Completed' },
             { key: 'no-estimates', label: 'No Estimates' },
             { key: 'all',          label: 'All' },
           ] as { key: Tab; label: string }[]).map(({ key, label }) => (
@@ -286,21 +362,44 @@ export default function Customers() {
             <p className="text-center text-gray-500 py-8">
               {searchTerm ? 'No customers match your search' : 'No customers yet'}
             </p>
-          ) : displayCustomers.map((customer) => {
+          ) : (
+            <>
+              {activeTab === 'active' && priorityCustomers.length > 0 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1B3A5C' }}>Priority</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+              )}
+              {(activeTab === 'active' ? [...priorityCustomers, ...nonPriorityCustomers] : displayCustomers).map((customer, idx) => {
             const estimates = estimatesByCustomerId[customer.id] || [];
             const priorityEstimate = estimates[0];
             const isExpanded = expandedCustomerId === customer.id;
             const hasWarning = estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl);
+            const showNonPriorityDivider = activeTab === 'active' && priorityCustomers.length > 0 && idx === priorityCustomers.length;
 
             return (
-              <div key={customer.id} className="bg-white rounded-lg shadow-sm p-4">
+              <div key={customer.id}>
+                {showNonPriorityDivider && (
+                  <div className="flex items-center gap-2 pt-1 pb-0">
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                )}
+              <div className="bg-white rounded-lg shadow-sm p-4">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex-1 min-w-0 mr-2">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-semibold text-gray-900 text-base">{customer.name}</p>
                       {hasWarning && <WarningBadge />}
+                      {( activeTab === 'signed' || activeTab === 'completed') && estimates.some(isProjectComplete) && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}>Completed</span>
+                      )}
                     </div>
+                    {(activeTab === 'signed' || activeTab === 'completed') && priorityEstimate?.installationDate && (
+                      <p className="text-xs font-medium mb-0.5" style={{ color: '#1B3A5C' }}>
+                        Install: {new Date(priorityEstimate.installationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
                     {/* At-a-glance estimate summary */}
                     {priorityEstimate && (() => {
                       const { label, textColor } = getEstimateStatusInfo(priorityEstimate);
@@ -331,6 +430,16 @@ export default function Customers() {
 
                 {/* Primary action buttons */}
                 <div className="flex gap-2 mb-2">
+                  {(activeTab === 'active' || activeTab === 'all') && (
+                    <button
+                      onClick={() => handleTogglePriority(customer)}
+                      title={customer.priority ? 'Remove priority' : 'Mark as priority'}
+                      className="py-2 px-2 rounded-md text-lg leading-none hover:bg-gray-100 transition flex-shrink-0"
+                      aria-label="Toggle priority"
+                    >
+                      {customer.priority ? '★' : '☆'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleEditCustomer(customer)}
                     className="text-white py-2 px-3 rounded-md text-sm font-medium hover:opacity-90 transition flex-shrink-0"
@@ -339,17 +448,23 @@ export default function Customers() {
                     Edit
                   </button>
                   {priorityEstimate ? (
-                    <Link
-                      href={`/estimates/${priorityEstimate.id}/edit`}
-                      className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
-                      style={{
-                        backgroundColor: (priorityEstimate.contractorSignatureDataUrl || priorityEstimate.status === 'signed')
-                          ? '#059669'
-                          : '#1B3A5C'
-                      }}
-                    >
-                      Open Estimate →
-                    </Link>
+                    isFullySigned(priorityEstimate) ? (
+                      <button
+                        onClick={() => toggleProjectProgress(customer.id)}
+                        className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                        style={{ backgroundColor: '#059669' }}
+                      >
+                        Project Progress
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/estimates/${priorityEstimate.id}/edit`}
+                        className="flex-1 text-white py-2 rounded-md text-sm font-medium hover:opacity-90 transition text-center"
+                        style={{ backgroundColor: '#1B3A5C' }}
+                      >
+                        Open Estimate →
+                      </Link>
+                    )
                   ) : (
                     <Link
                       href={`/estimates/new?customer=${customer.id}`}
@@ -361,80 +476,89 @@ export default function Customers() {
                   )}
                 </div>
 
-                {/* Expand toggle — shown when at least one estimate exists */}
-                {estimates.length > 0 && (
-                  <button
-                    onClick={() => toggleEstimates(customer.id)}
-                    className="w-full text-left text-sm py-1.5 px-2 rounded hover:bg-gray-50 transition flex items-center justify-between"
-                    style={{ color: '#1B3A5C' }}
-                  >
-                    <span>{isExpanded ? '▲' : '▾'} All Estimates ({estimates.length})</span>
-                  </button>
-                )}
-
-                {/* Expanded estimate list */}
-                {isExpanded && (
-                  <div className="mt-2 space-y-2 border-t pt-3">
-                    {estimates.map((estimate) => {
-                      const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
-                      return (
-                        <div
-                          key={estimate.id}
-                          className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50"
-                        >
-                          <div className="min-w-0 mr-2 flex items-center gap-2">
-                            {(estimate.photos ?? []).length > 0 && (
-                              <div className="flex gap-1 flex-shrink-0">
-                                {estimate.photos!.slice(0, 3).map(photo => (
-                                  <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer">
-                                    <img src={photo.url} alt="Job photo" className="w-10 h-10 object-cover rounded border border-gray-200" />
-                                  </a>
-                                ))}
-                                {estimate.photos!.length > 3 && (
-                                  <div className="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium">
-                                    +{estimate.photos!.length - 3}
-                                  </div>
-                                )}
+                {/* Project Progress expanded section (signed proposals + checklist) */}
+                {expandedProjectCustomerId === customer.id && (() => {
+                  const signedEstimates = estimates.filter(isFullySigned);
+                  return signedEstimates.length > 0 ? (
+                    <div className="mt-2 space-y-2 border-t pt-3">
+                      {signedEstimates.map((estimate, estIdx) => {
+                        const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
+                        return (
+                          <div key={estimate.id}>
+                            <div className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50">
+                              <div className="min-w-0 mr-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: bgColor, color: textColor }}>{label}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
                               </div>
-                            )}
-                            <div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-sm font-semibold text-gray-900">
-                                  ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                                <span
-                                  className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                  style={{ backgroundColor: bgColor, color: textColor }}
-                                >
-                                  {label}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
+                              <Link href={`/estimates/${estimate.id}/edit`} className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0" style={{ backgroundColor: '#1B3A5C' }}>Open</Link>
                             </div>
+                            {estIdx === 0 && (
+                              <ProjectProgressPanel estimate={estimate} onUpdate={handleProjectUpdate} onPhotosChange={makePhotosChangeHandler(estimate.id, customer.id)} />
+                            )}
                           </div>
+                        );
+                      })}
+                    </div>
+                  ) : null;
+                })()}
+
+                {/* All unsigned proposals dropdown */}
+                {(() => {
+                  const unsignedEstimates = estimates.filter(e => !isFullySigned(e));
+                  const showDropdown = estimates.length > 0 && ((activeTab !== 'signed' && activeTab !== 'completed') || unsignedEstimates.length > 0);
+                  if (!showDropdown) return null;
+                  const dropdownEstimates = (activeTab === 'signed' || activeTab === 'completed') ? unsignedEstimates : estimates;
+                  return (
+                    <>
+                      <button
+                        onClick={() => toggleEstimates(customer.id)}
+                        className="w-full text-left text-sm py-1.5 px-2 rounded hover:bg-gray-50 transition flex items-center justify-between"
+                        style={{ color: '#1B3A5C' }}
+                      >
+                        <span>{isExpanded ? '▲' : '▾'} {(activeTab === 'signed' || activeTab === 'completed') ? `Other Proposals (${dropdownEstimates.length})` : `All Estimates (${dropdownEstimates.length})`}</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="mt-2 space-y-2 border-t pt-3">
+                          {dropdownEstimates.map((estimate) => {
+                            const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
+                            return (
+                              <div key={estimate.id} className="flex items-center justify-between p-2 rounded-md border border-gray-100 bg-gray-50">
+                                <div className="min-w-0 mr-2">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: bgColor, color: textColor }}>{label}</span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">{formatSummaryDate(estimate.updatedAt)}</p>
+                                </div>
+                                <Link href={`/estimates/${estimate.id}/edit`} className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0" style={{ backgroundColor: '#1B3A5C' }}>Open</Link>
+                              </div>
+                            );
+                          })}
                           <Link
-                            href={`/estimates/${estimate.id}/edit`}
-                            className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0"
-                            style={{ backgroundColor: '#1B3A5C' }}
+                            href={`/estimates/new?customer=${customer.id}`}
+                            className="block w-full text-center py-2 rounded-md text-sm font-semibold hover:opacity-90 transition border-2 border-dashed"
+                            style={{ color: '#059669', borderColor: '#059669' }}
                           >
-                            Open
+                            + New Estimate
                           </Link>
                         </div>
-                      );
-                    })}
-                    {/* Always-visible new estimate option */}
-                    <Link
-                      href={`/estimates/new?customer=${customer.id}`}
-                      className="block w-full text-center py-2 rounded-md text-sm font-semibold hover:opacity-90 transition border-2 border-dashed"
-                      style={{ color: '#059669', borderColor: '#059669' }}
-                    >
-                      + New Estimate
-                    </Link>
-                  </div>
-                )}
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
               </div>
             );
           })}
+            </>
+          )}
         </div>
 
         {/* Desktop Table */}
@@ -459,20 +583,55 @@ export default function Customers() {
                     </td>
                   </tr>
                 ) : (
-                  displayCustomers.flatMap((customer) => {
+                  (activeTab === 'active' ? [...priorityCustomers, ...nonPriorityCustomers] : displayCustomers).flatMap((customer, idx) => {
                     const estimates = estimatesByCustomerId[customer.id] || [];
                     const priorityEstimate = estimates[0];
                     const isExpanded = expandedCustomerId === customer.id;
+                    const isProjectExpanded = expandedProjectCustomerId === customer.id;
                     const hasWarning = estimates.some(e => e.customerSignedAt && !e.contractorSignatureDataUrl);
+                    const showPriorityHeader = activeTab === 'active' && idx === 0 && priorityCustomers.length > 0;
+                    const showNonPriorityDivider = activeTab === 'active' && priorityCustomers.length > 0 && idx === priorityCustomers.length;
 
-                    const rows = [
+                    const rows: React.ReactElement[] = [];
+
+                    if (showPriorityHeader) {
+                      rows.push(
+                        <tr key="priority-header">
+                          <td colSpan={6} className="px-6 pt-3 pb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1B3A5C' }}>Priority</span>
+                              <div className="flex-1 h-px bg-gray-200" />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+                    if (showNonPriorityDivider) {
+                      rows.push(
+                        <tr key="non-priority-divider">
+                          <td colSpan={6} className="px-6 pt-2 pb-0">
+                            <div className="h-px bg-gray-200" />
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    rows.push(
                       <tr key={customer.id} className="border-b hover:bg-gray-50">
                         {/* Name cell — includes at-a-glance summary */}
                         <td className="px-6 py-4">
-                          <div className="flex items-start gap-2">
+                          <div className="flex items-center gap-2">
                             <p className="font-semibold text-gray-900">{customer.name}</p>
                             {hasWarning && <WarningBadge />}
+                            {( activeTab === 'signed' || activeTab === 'completed') && estimates.some(isProjectComplete) && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}>Completed</span>
+                            )}
                           </div>
+                          {(activeTab === 'signed' || activeTab === 'completed') && priorityEstimate?.installationDate && (
+                            <p className="text-xs font-medium mt-0.5" style={{ color: '#1B3A5C' }}>
+                              Install: {new Date(priorityEstimate.installationDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          )}
                           {priorityEstimate && (() => {
                             const { label, textColor } = getEstimateStatusInfo(priorityEstimate);
                             return (
@@ -506,6 +665,16 @@ export default function Customers() {
                         {/* Actions cell */}
                         <td className="px-6 py-4">
                           <div className="flex gap-2 items-center flex-wrap">
+                            {(activeTab === 'active' || activeTab === 'all') && (
+                              <button
+                                onClick={() => handleTogglePriority(customer)}
+                                title={customer.priority ? 'Remove priority' : 'Mark as priority'}
+                                className="text-xl leading-none hover:scale-110 transition-transform px-1"
+                                aria-label="Toggle priority"
+                              >
+                                {customer.priority ? '★' : '☆'}
+                              </button>
+                            )}
                             <button
                               onClick={() => handleEditCustomer(customer)}
                               className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
@@ -515,24 +684,37 @@ export default function Customers() {
                             </button>
                             {priorityEstimate ? (
                               <>
-                                <Link
-                                  href={`/estimates/${priorityEstimate.id}/edit`}
-                                  className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                                  style={{
-                                    backgroundColor: (priorityEstimate.contractorSignatureDataUrl || priorityEstimate.status === 'signed')
-                                      ? '#059669'
-                                      : '#1B3A5C'
-                                  }}
-                                >
-                                  Open Estimate →
-                                </Link>
-                                <button
-                                  onClick={() => toggleEstimates(customer.id)}
-                                  className="px-3 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
-                                  style={{ backgroundColor: '#F3F4F6', color: '#374151' }}
-                                >
-                                  {isExpanded ? '▲' : '▾'} All ({estimates.length})
-                                </button>
+                                {isFullySigned(priorityEstimate) ? (
+                                  <button
+                                    onClick={() => toggleProjectProgress(customer.id)}
+                                    className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                    style={{ backgroundColor: '#059669' }}
+                                  >
+                                    Project Progress
+                                  </button>
+                                ) : (
+                                  <Link
+                                    href={`/estimates/${priorityEstimate.id}/edit`}
+                                    className="text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                    style={{ backgroundColor: '#1B3A5C' }}
+                                  >
+                                    Open Estimate →
+                                  </Link>
+                                )}
+                                {(() => {
+                                  const unsignedCount = (activeTab === 'signed' || activeTab === 'completed') ? estimates.filter(e => !isFullySigned(e)).length : estimates.length;
+                                  const label = (activeTab === 'signed' || activeTab === 'completed') ? `Other (${unsignedCount})` : `All (${estimates.length})`;
+                                  if ((activeTab === 'signed' || activeTab === 'completed') && unsignedCount === 0) return null;
+                                  return (
+                                    <button
+                                      onClick={() => toggleEstimates(customer.id)}
+                                      className="px-3 py-2 rounded-md text-sm font-medium hover:opacity-90 transition"
+                                      style={{ backgroundColor: '#F3F4F6', color: '#374151' }}
+                                    >
+                                      {isExpanded ? '▲' : '▾'} {label}
+                                    </button>
+                                  );
+                                })()}
                               </>
                             ) : (
                               <Link
@@ -545,24 +727,57 @@ export default function Customers() {
                             )}
                           </div>
                         </td>
-                      </tr>,
-                    ];
+                      </tr>
+                    );
 
+                    // Project Progress row — signed proposals + checklist
+                    if (isProjectExpanded) {
+                      const signedEstimates = estimates.filter(isFullySigned);
+                      if (signedEstimates.length > 0) {
+                        rows.push(
+                          <tr key={`${customer.id}-project`} className="bg-gray-50 border-b">
+                            <td colSpan={6} className="px-6 py-4">
+                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {signedEstimates.map((estimate, estIdx) => {
+                                  const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
+                                  return (
+                                    <div key={estimate.id}>
+                                      <div className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200">
+                                        <div className="min-w-0 mr-2">
+                                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                            <p className="font-semibold text-gray-900 text-sm">
+                                              ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: bgColor, color: textColor }}>{label}</span>
+                                          </div>
+                                          <p className="text-xs text-gray-500">{formatSummaryDate(estimate.updatedAt)}</p>
+                                        </div>
+                                        <Link href={`/estimates/${estimate.id}/edit`} className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0" style={{ backgroundColor: '#1B3A5C' }}>Open</Link>
+                                      </div>
+                                      {estIdx === 0 && (
+                                        <ProjectProgressPanel estimate={estimate} onUpdate={handleProjectUpdate} onPhotosChange={makePhotosChangeHandler(estimate.id, customer.id)} />
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }
+                    }
+
+                    // All unsigned proposals dropdown
                     if (isExpanded) {
+                      const dropdownEstimates = (activeTab === 'signed' || activeTab === 'completed') ? estimates.filter(e => !isFullySigned(e)) : estimates;
                       rows.push(
                         <tr key={`${customer.id}-estimates`} className="bg-gray-50 border-b">
                           <td colSpan={6} className="px-6 py-4">
-                            <h4 className="font-semibold text-gray-700 mb-3">
-                              All Estimates ({estimates.length})
-                            </h4>
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                              {estimates.map((estimate) => {
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                              {dropdownEstimates.map((estimate) => {
                                 const { label, bgColor, textColor } = getEstimateStatusInfo(estimate);
                                 return (
-                                  <div
-                                    key={estimate.id}
-                                    className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200"
-                                  >
+                                  <div key={estimate.id} className="flex justify-between items-center p-3 bg-white rounded-md border border-gray-200">
                                     <div className="min-w-0 mr-2 flex items-center gap-2">
                                       {(estimate.photos ?? []).length > 0 && (
                                         <div className="flex gap-1 flex-shrink-0">
@@ -583,27 +798,15 @@ export default function Customers() {
                                           <p className="font-semibold text-gray-900 text-sm">
                                             ${estimate.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </p>
-                                          <span
-                                            className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-                                            style={{ backgroundColor: bgColor, color: textColor }}
-                                          >
-                                            {label}
-                                          </span>
+                                          <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: bgColor, color: textColor }}>{label}</span>
                                         </div>
                                         <p className="text-xs text-gray-500">{formatSummaryDate(estimate.updatedAt)}</p>
                                       </div>
                                     </div>
-                                    <Link
-                                      href={`/estimates/${estimate.id}/edit`}
-                                      className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0"
-                                      style={{ backgroundColor: '#1B3A5C' }}
-                                    >
-                                      Open
-                                    </Link>
+                                    <Link href={`/estimates/${estimate.id}/edit`} className="text-white text-xs px-3 py-1.5 rounded-md font-medium hover:opacity-90 transition flex-shrink-0" style={{ backgroundColor: '#1B3A5C' }}>Open</Link>
                                   </div>
                                 );
                               })}
-                              {/* New estimate card */}
                               <Link
                                 href={`/estimates/new?customer=${customer.id}`}
                                 className="flex items-center justify-center p-3 rounded-md border-2 border-dashed text-sm font-semibold hover:opacity-90 transition"

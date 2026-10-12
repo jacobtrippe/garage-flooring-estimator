@@ -8,6 +8,7 @@ export async function GET() {
       estimates: {
         select: {
           id: true,
+          customerId: true,
           totalPrice: true,
           status: true,
           createdAt: true,
@@ -17,6 +18,28 @@ export async function GET() {
           agreementPdfUrl: true,
           customerSignedAt: true,
           contractorSignatureDataUrl: true,
+          quoteType: true,
+          installationDate: true,
+          downPaymentReceived: true,
+          downPaymentReceivedAt: true,
+          flakeType: true,
+          colorChosen: true,
+          topCoatType: true,
+          sealerType: true,
+          storageRequired: true,
+          storageNotes: true,
+          materialsPurchased: true,
+          projectCompleted: true,
+          projectCompletedAt: true,
+          finalPaymentCollected: true,
+          items: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              product: { select: { section: { select: { title: true } } } },
+            },
+          },
           photos: {
             select: { id: true, url: true },
             orderBy: { createdAt: "asc" },

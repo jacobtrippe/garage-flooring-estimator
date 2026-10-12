@@ -13,6 +13,10 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
+  session: {
+    maxAge: 24 * 60 * 60,   // expire after 24h of inactivity
+    updateAge: 30 * 60,      // slide the window every 30min of use
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -20,12 +24,14 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize() {
-        return {
-          id: "admin",
-          email: "jacob@orangelips.com",
-          name: "Admin",
-        };
+      async authorize(credentials) {
+        if (
+          credentials?.email === process.env.ADMIN_EMAIL &&
+          credentials?.password === process.env.ADMIN_PASSWORD
+        ) {
+          return { id: "admin", email: process.env.ADMIN_EMAIL, name: "Admin" };
+        }
+        return null;
       },
     }),
   ],

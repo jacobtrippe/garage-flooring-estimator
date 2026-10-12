@@ -19,6 +19,7 @@ model Customer {
   garageSqft Float
   carPorts   Int
   notes      String     @default("")
+  priority   Boolean    @default(false)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   estimates  Estimate[]
@@ -43,6 +44,18 @@ model Estimate {
   customerSignedAt           DateTime?
   agreementPdfUrl            String?
   estimatePdfUrl             String?
+  downPaymentReceived        Boolean        @default(false)
+  downPaymentReceivedAt      DateTime?
+  flakeType                  String?
+  colorChosen                String?
+  topCoatType                String?
+  sealerType                 String?
+  storageRequired            Boolean        @default(false)
+  storageNotes               String?
+  materialsPurchased         Boolean        @default(false)
+  projectCompleted           Boolean        @default(false)
+  projectCompletedAt         DateTime?
+  finalPaymentCollected      Boolean        @default(false)
   customer                   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   items                      EstimateItem[]
   photos                     EstimatePhoto[]

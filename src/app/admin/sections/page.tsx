@@ -173,12 +173,14 @@ export default function SectionsAdmin() {
   const sectionIds = useMemo(() => sections.map((s) => s.id), [sections]);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
+    if (status === "unauthenticated") {
+      router.push("/login");
+      return;
+    }
+    if (status === "authenticated") {
+      fetchSections();
+    }
   }, [status, router]);
-
-  useEffect(() => {
-    fetchSections();
-  }, []);
 
   const fetchSections = async () => {
     const res = await fetch("/api/sections");
