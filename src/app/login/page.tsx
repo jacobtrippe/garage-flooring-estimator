@@ -3,7 +3,6 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -35,7 +34,7 @@ export default function Login() {
       >
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <Image
+          <img
             src="/logo.jpg"
             alt="Platinum Installs"
             width={80}
