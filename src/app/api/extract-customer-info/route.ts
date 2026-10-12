@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { requireAuth } from "@/lib/requireAuth";
 
 const client = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -25,6 +26,8 @@ Rules:
 - Name should be First Last format if possible`;
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   if (!client) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY not configured' },

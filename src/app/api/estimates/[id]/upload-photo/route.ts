@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from "@/lib/requireAuth";
 
 const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(
@@ -13,6 +14,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     if (!supabase) {
       return NextResponse.json(

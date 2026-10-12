@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function GET(req: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const sectionId = req.nextUrl.searchParams.get("sectionId");
 
   const products = await prisma.product.findMany({

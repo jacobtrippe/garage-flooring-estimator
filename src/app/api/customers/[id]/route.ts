@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { id } = await params;
   const customer = await prisma.customer.findUnique({
     where: { id },

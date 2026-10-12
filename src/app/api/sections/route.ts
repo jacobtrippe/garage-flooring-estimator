@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function GET() {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const sections = await prisma.section.findMany({
     include: { products: { orderBy: { displayOrder: "asc" } } },
     orderBy: { displayOrder: "asc" },

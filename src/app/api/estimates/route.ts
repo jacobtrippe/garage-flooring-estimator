@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function GET(request: NextRequest) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   try {
     const searchParams = request.nextUrl.searchParams;
     const customerId = searchParams.get('customerId');

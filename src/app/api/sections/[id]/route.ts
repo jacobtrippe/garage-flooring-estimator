@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/requireAuth";
 
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAuth();
+  if (authError) return authError;
   const { id } = await params;
   await prisma.section.delete({ where: { id } });
   return NextResponse.json({ success: true });
