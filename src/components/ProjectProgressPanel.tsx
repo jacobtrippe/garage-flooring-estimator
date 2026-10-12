@@ -327,7 +327,13 @@ export default function ProjectProgressPanel({ estimate, onUpdate, onPhotosChang
                     ? `${flakeItem.name}${estimate.colorChosen ? ` — ${estimate.colorChosen}` : ''}`
                     : estimate.colorChosen ? `— ${estimate.colorChosen}` : '—',
                 },
-                { label: 'Top Coat', value: topCoatItem?.name ?? '—' },
+                { label: 'Top Coat', value: topCoatItem ? (() => {
+                    const n = topCoatItem.name;
+                    const lower = n.toLowerCase();
+                    if (lower.includes('heavy duty polyaspartic')) return `${n} (5085)`;
+                    if (lower.includes('traditional polyaspartic')) return `${n} (5020)`;
+                    return n;
+                  })() : '—' },
                 ...(isExterior ? [{ label: 'Sealer', value: sealerItem?.name ?? '—' }] : []),
               ];
 
