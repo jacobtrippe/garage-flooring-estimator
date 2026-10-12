@@ -25,12 +25,14 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (
-          credentials?.email === process.env.ADMIN_EMAIL &&
-          credentials?.password === process.env.ADMIN_PASSWORD
-        ) {
-          return { id: "admin", email: process.env.ADMIN_EMAIL, name: "Admin" };
-        }
+        const users = [
+          { id: "admin", username: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD, name: "Admin" },
+          { id: "user2", username: process.env.USER2_USERNAME, password: process.env.USER2_PASSWORD, name: process.env.USER2_USERNAME },
+        ];
+        const match = users.find(
+          (u) => u.username && u.password && credentials?.email === u.username && credentials?.password === u.password
+        );
+        if (match) return { id: match.id, email: match.username, name: match.name };
         return null;
       },
     }),
