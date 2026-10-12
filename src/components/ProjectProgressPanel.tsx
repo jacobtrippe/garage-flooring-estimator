@@ -54,7 +54,7 @@ export default function ProjectProgressPanel({ estimate, onUpdate, onPhotosChang
   const step3Done = !!(estimate.projectCompleted && estimate.finalPaymentCollected);
 
   const [openStep, setOpenStep] = useState<1 | 2 | 3 | null>(
-    !step1Done ? 1 : !step3Done ? 3 : null
+    !step1Done ? 1 : !step2Done ? 2 : !step3Done ? 3 : null
   );
   const [saving, setSaving] = useState(false);
 
@@ -143,6 +143,8 @@ export default function ProjectProgressPanel({ estimate, onUpdate, onPhotosChang
   };
 
   const toggleStep = (step: 1 | 2 | 3) => {
+    if (step === 2 && !step1Done) return;
+    if (step === 3 && !step2Done) return;
     setOpenStep(openStep === step ? null : step);
   };
 
@@ -299,12 +301,14 @@ export default function ProjectProgressPanel({ estimate, onUpdate, onPhotosChang
       <div className="border-t border-gray-100">
         <button
           onClick={() => toggleStep(2)}
-          className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 transition"
+          disabled={!step1Done}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-left transition"
+          style={{ cursor: !step1Done ? 'not-allowed' : 'pointer' }}
         >
-          <span className="text-sm font-semibold" style={{ color: step2Done ? '#059669' : '#1B3A5C' }}>
+          <span className="text-sm font-semibold" style={{ color: !step1Done ? '#9CA3AF' : step2Done ? '#059669' : '#1B3A5C' }}>
             Material List
           </span>
-          <span className="text-gray-400 text-xs">{openStep === 2 ? '▲' : '▾'}</span>
+          <span className="text-gray-400 text-xs">{!step1Done ? '🔒' : openStep === 2 ? '▲' : '▾'}</span>
         </button>
         {openStep === 2 && (
           <div className="px-4 pb-3">
@@ -367,17 +371,19 @@ export default function ProjectProgressPanel({ estimate, onUpdate, onPhotosChang
       <div className="border-t border-gray-100">
         <button
           onClick={() => toggleStep(3)}
-          className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 transition"
+          disabled={!step2Done}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-left transition"
+          style={{ cursor: !step2Done ? 'not-allowed' : 'pointer' }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold" style={{ color: step3Done ? '#059669' : '#1B3A5C' }}>
+            <span className="text-sm font-semibold" style={{ color: !step2Done ? '#9CA3AF' : step3Done ? '#059669' : '#1B3A5C' }}>
               Project Complete
             </span>
             {step3Done && estimate.projectCompletedAt && (
               <span className="text-xs text-gray-400">{formatDate(estimate.projectCompletedAt)}</span>
             )}
           </div>
-          <span className="text-gray-400 text-xs">{openStep === 3 ? '▲' : '▾'}</span>
+          <span className="text-gray-400 text-xs">{!step2Done ? '🔒' : openStep === 3 ? '▲' : '▾'}</span>
         </button>
         {openStep === 3 && (
           <div className="px-4 pb-3 space-y-2.5">
