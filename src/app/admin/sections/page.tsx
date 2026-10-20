@@ -96,6 +96,7 @@ function SortableSectionRow({
               <option value="interior">Interior</option>
               <option value="exterior">Exterior</option>
               <option value="both">Both</option>
+              <option value="commercial">Commercial</option>
             </select>
           </td>
           <td className="px-6 py-4 space-x-2">
@@ -292,6 +293,7 @@ export default function SectionsAdmin() {
               <option value="interior">Interior</option>
               <option value="exterior">Exterior</option>
               <option value="both">Both</option>
+              <option value="commercial">Commercial</option>
             </select>
             <button
               type="submit"

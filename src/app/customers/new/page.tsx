@@ -386,6 +386,7 @@ export default function NewCustomer() {
                     <option value="2">2 Car Ports</option>
                     <option value="3">3 Car Ports</option>
                     <option value="4">4+ Car Ports</option>
+                    <option value="0">Commercial</option>
                   </select>
                 </div>
               </div>

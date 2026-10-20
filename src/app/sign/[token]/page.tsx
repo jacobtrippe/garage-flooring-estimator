@@ -23,6 +23,7 @@ interface EstimateData {
   totalPrice: number;
   quoteType: string;
   exteriorSqft?: number;
+  commercialSqft?: number;
   signatureDataUrl?: string;
   customerSignedAt?: string;
   contractorSignatureDataUrl?: string;
@@ -175,6 +176,7 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
   const docTitle =
     estimate.quoteType === 'exterior' ? 'Exterior Concrete Sealer Proposal' :
     estimate.quoteType === 'both' ? 'Floor Coating & Sealer Proposal' :
+    estimate.quoteType === 'commercial' ? 'Commercial Concrete Coating Proposal' :
     'Platinum Installs Proposal';
 
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -257,7 +259,15 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
           {/* Scope summary */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Scope of Work</div>
-            {estimate.quoteType === 'exterior' ? (
+            {estimate.quoteType === 'commercial' ? (
+              <ul className="text-sm text-gray-600 space-y-1.5">
+                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Professional surface preparation and grinding</li>
+                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Crack and joint repair as needed</li>
+                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Commercial-grade concrete coating system</li>
+                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>All labor and materials included</li>
+                <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Final inspection and walk-through</li>
+              </ul>
+            ) : estimate.quoteType === 'exterior' ? (
               <ul className="text-sm text-gray-600 space-y-1.5">
                 <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Professional surface cleaning and degreasing</li>
                 <li className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>Concrete preparation and inspection</li>

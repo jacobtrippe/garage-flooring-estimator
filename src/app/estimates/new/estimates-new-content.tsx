@@ -49,7 +49,7 @@ interface SelectedItem {
   totalPrice: number;
 }
 
-type QuoteType = "interior" | "exterior" | "both";
+type QuoteType = "interior" | "exterior" | "both" | "commercial";
 
 export function EstimatesNewContent() {
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -64,6 +64,7 @@ export function EstimatesNewContent() {
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
+  const [commercialSqft, setCommercialSqft] = useState<number>(0);
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
   const { status } = useSession();
   const router = useRouter();
@@ -84,7 +85,8 @@ export function EstimatesNewContent() {
   const filteredSections = sections.filter((section) => {
     if (quoteType === "interior") return section.category === "interior" || section.category === "both";
     if (quoteType === "exterior") return section.category === "exterior" || section.category === "both";
-    return true;
+    if (quoteType === "commercial") return section.category === "commercial";
+    return true; // "both"
   });
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export function EstimatesNewContent() {
 
   useEffect(() => {
     setSelectedItems((prev) => recalculateItems(prev));
-  }, [exteriorSqft, sections]);
+  }, [exteriorSqft, commercialSqft, sections]);
 
   const fetchCustomer = async () => {
     try {
@@ -172,7 +174,7 @@ export function EstimatesNewContent() {
       setCustomer(updated);
       setEditingCustomer(false);
 
-      // Auto-save estimate with current exteriorSqft, quoteType, and approvedDiscount
+      // Auto-save estimate with current sqft, quoteType, and approvedDiscount
       if (estimateId) {
         // Update existing estimate
         await fetch(`/api/estimates/${estimateId}`, {
@@ -180,8 +182,9 @@ export function EstimatesNewContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             quoteType,
-            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
-            approvedDiscount,
+            exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
+            commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
       } else if (selectedItems.length > 0 && customer) {
@@ -202,8 +205,9 @@ export function EstimatesNewContent() {
             totalPrice,
             status: "draft",
             quoteType,
-            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
-            approvedDiscount,
+            exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
+            commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
 
@@ -249,8 +253,9 @@ export function EstimatesNewContent() {
             totalPrice,
             status: "draft",
             quoteType,
-            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
-            approvedDiscount,
+            exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
+            commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
 
@@ -277,6 +282,8 @@ export function EstimatesNewContent() {
       let sqft: number;
       if (quoteType === "exterior") {
         sqft = exteriorSqft;
+      } else if (quoteType === "commercial") {
+        sqft = commercialSqft;
       } else if (quoteType === "interior") {
         sqft = customer.garageSqft;
       } else {
@@ -415,8 +422,9 @@ export function EstimatesNewContent() {
             totalPrice,
             status: "draft",
             quoteType,
-            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
-            approvedDiscount,
+            exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
+            commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
 
@@ -439,8 +447,9 @@ export function EstimatesNewContent() {
             totalPrice,
             status: "draft",
             quoteType,
-            exteriorSqft: quoteType !== "interior" ? exteriorSqft : null,
-            approvedDiscount,
+            exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
+            commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
 
@@ -508,12 +517,18 @@ export function EstimatesNewContent() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-700">Car Ports</p>
-                    <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{customer.carPorts}</p>
+                    <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{customer.carPorts === 0 ? 'Commercial' : customer.carPorts}</p>
                   </div>
                   {(quoteType === "exterior" || quoteType === "both") && (
                     <div className="pt-4 border-t">
                       <p className="font-semibold text-gray-700">Exterior Area</p>
                       <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{exteriorSqft} sqft</p>
+                    </div>
+                  )}
+                  {quoteType === "commercial" && (
+                    <div className="pt-4 border-t">
+                      <p className="font-semibold text-gray-700">Commercial Area</p>
+                      <p className="text-lg font-bold" style={{ color: '#1B3A5C' }}>{commercialSqft} sqft</p>
                     </div>
                   )}
                   {customer.notes && (
@@ -601,12 +616,17 @@ export function EstimatesNewContent() {
                   </div>
                   <div>
                     <label className="font-semibold text-gray-700 block mb-1">Car Ports</label>
-                    <input
-                      type="number"
-                      value={editForm?.carPorts || ""}
+                    <select
+                      value={editForm?.carPorts ?? ""}
                       onChange={(e) => handleCustomerFieldChange("carPorts", parseInt(e.target.value))}
                       className="w-full border rounded px-2 py-1"
-                    />
+                    >
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4+</option>
+                      <option value="0">Commercial</option>
+                    </select>
                   </div>
                   {(quoteType === "exterior" || quoteType === "both") && (
                     <div>
@@ -615,6 +635,17 @@ export function EstimatesNewContent() {
                         type="number"
                         value={exteriorSqft || ""}
                         onChange={(e) => setExteriorSqft(parseFloat(e.target.value) || 0)}
+                        className="w-full border rounded px-2 py-1"
+                      />
+                    </div>
+                  )}
+                  {quoteType === "commercial" && (
+                    <div>
+                      <label className="font-semibold text-gray-700 block mb-1">Commercial Area (sqft)</label>
+                      <input
+                        type="number"
+                        value={commercialSqft || ""}
+                        onChange={(e) => setCommercialSqft(parseFloat(e.target.value) || 0)}
                         className="w-full border rounded px-2 py-1"
                       />
                     </div>
@@ -644,7 +675,7 @@ export function EstimatesNewContent() {
           {/* Middle: Products */}
           <div className="col-span-1">
             <div className="mb-6 flex flex-wrap gap-2 justify-center">
-              {(["interior", "exterior", "both"] as QuoteType[]).map((type) => (
+              {(["interior", "exterior", "both", "commercial"] as QuoteType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => setQuoteType(type)}
@@ -760,21 +791,35 @@ export function EstimatesNewContent() {
                     <span className="text-2xl font-bold" style={{ color: '#1B3A5C' }}>${getTotalPrice().toFixed(2)}</span>
                   </div>
 
-                  <div className="border-t pt-3 mt-3">
-                    <label className="font-semibold text-gray-700 block mb-2">Approved Discount</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={approvedDiscount}
-                      onChange={(e) => setApprovedDiscount(parseFloat(e.target.value) || 0)}
-                      className="w-full border-2 rounded px-3 py-2 text-gray-900"
-                      placeholder="Enter discount amount"
-                    />
-                    {approvedDiscount > 0 && (
-                      <p className="text-sm text-green-700 font-medium mt-1">-${approvedDiscount.toFixed(2)}</p>
-                    )}
-                  </div>
+                  {quoteType === "commercial" && (
+                    <div className="border-t pt-3 mt-3">
+                      <label className="font-semibold text-gray-700 block mb-2">Commercial Area (sqft)</label>
+                      <input
+                        type="number"
+                        value={commercialSqft || ""}
+                        onChange={(e) => setCommercialSqft(parseFloat(e.target.value) || 0)}
+                        className="w-full border-2 rounded px-3 py-2 text-gray-900"
+                        placeholder="Enter sqft"
+                      />
+                    </div>
+                  )}
+                  {quoteType !== "commercial" && (
+                    <div className="border-t pt-3 mt-3">
+                      <label className="font-semibold text-gray-700 block mb-2">Approved Discount</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={approvedDiscount}
+                        onChange={(e) => setApprovedDiscount(parseFloat(e.target.value) || 0)}
+                        className="w-full border-2 rounded px-3 py-2 text-gray-900"
+                        placeholder="Enter discount amount"
+                      />
+                      {approvedDiscount > 0 && (
+                        <p className="text-sm text-green-700 font-medium mt-1">-${approvedDiscount.toFixed(2)}</p>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={handleSaveDraft}
@@ -818,6 +863,7 @@ export function EstimatesNewContent() {
           estimateId={estimateId}
           quoteType={quoteType}
           exteriorSqft={exteriorSqft}
+          commercialSqft={commercialSqft}
           itemCategories={Object.fromEntries(
             selectedItems.map((item) => {
               const section = sections.find((s) => s.products.some((p) => p.id === item.productId));

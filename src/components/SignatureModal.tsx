@@ -28,6 +28,7 @@ interface SignatureModalProps {
   estimateId: string;
   quoteType?: string;
   exteriorSqft?: number;
+  commercialSqft?: number;
   itemCategories?: Record<string, string>;
   preSignedSignatureDataUrl?: string;
   installationDate?: string;
@@ -59,6 +60,7 @@ export default function SignatureModal({
   estimateId,
   quoteType = 'interior',
   exteriorSqft,
+  commercialSqft,
   itemCategories,
   preSignedSignatureDataUrl,
   installationDate = '',
@@ -96,6 +98,7 @@ export default function SignatureModal({
   const docTitle =
     quoteType === 'exterior' ? 'Exterior Concrete Sealer Proposal' :
     quoteType === 'both' ? 'Floor Coating & Sealer Proposal' :
+    quoteType === 'commercial' ? 'Commercial Concrete Coating Proposal' :
     'Platinum Installs Proposal';
 
   // ── Business logic (unchanged) ──────────────────────────────────────────
@@ -448,7 +451,13 @@ export default function SignatureModal({
           {/* Scope */}
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Scope of Work</div>
-            {quoteType === 'exterior' ? (
+            {quoteType === 'commercial' ? (
+              <ul className="text-sm text-gray-600 space-y-1.5">
+                {['Professional surface preparation and grinding','Crack and joint repair as needed','Commercial-grade concrete coating system','All labor and materials included','Final inspection and walk-through'].map(s => (
+                  <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>
+                ))}
+              </ul>
+            ) : quoteType === 'exterior' ? (
               <ul className="text-sm text-gray-600 space-y-1.5">
                 {['Professional surface cleaning and degreasing','Concrete preparation and inspection','Siliconate penetrating sealer application','Siloxane water-repellent topcoat','Edge and joint detailing'].map(s => (
                   <li key={s} className="flex gap-2"><span className="text-gray-400 mt-0.5">•</span>{s}</li>

@@ -299,6 +299,7 @@ interface EstimatePDFProps {
   date: string;
   quoteType?: string;
   exteriorSqft?: number;
+  commercialSqft?: number;
   itemCategories?: Record<string, string>;
   approvedDiscount?: number;
 }
@@ -312,6 +313,7 @@ export default function EstimatePDF({
   date,
   quoteType = "interior",
   exteriorSqft,
+  commercialSqft,
   itemCategories,
   approvedDiscount = 0,
 }: EstimatePDFProps) {
@@ -320,6 +322,8 @@ export default function EstimatePDF({
       ? "Exterior Concrete Sealer Proposal"
       : quoteType === "both"
       ? "Floor Coating & Sealer Proposal"
+      : quoteType === "commercial"
+      ? "Commercial Concrete Coating Proposal"
       : "Platinum Installs Proposal";
 
   return (
@@ -370,7 +374,22 @@ export default function EstimatePDF({
         {/* Project Summary */}
         <View style={styles.scopeSection}>
           <Text style={styles.scopeTitle}>Project Summary</Text>
-          {quoteType === "exterior" ? (
+          {quoteType === "commercial" ? (
+            <>
+              <Text style={styles.scopeSubtitle}>
+                This proposal covers a commercial concrete coating project. Pricing is all-inclusive and covers all labor and materials for the selected coating system.
+                {commercialSqft ? ` Total area: ${commercialSqft.toLocaleString()} sq ft.` : ''}
+              </Text>
+              <Text style={styles.scopePackage}>Scope of Service</Text>
+              <Text style={styles.scopeList}>
+                • Professional surface preparation and grinding{'\n'}
+                • Crack and joint repair as needed{'\n'}
+                • Commercial-grade concrete coating system{'\n'}
+                • All labor and materials included{'\n'}
+                • Final inspection and walk-through
+              </Text>
+            </>
+          ) : quoteType === "exterior" ? (
             <>
               <Text style={styles.scopeSubtitle}>
                 This proposal includes professional exterior concrete sealing for driveways, walkways, patios, and surrounding concrete surfaces. Premium-grade sealers provide deep penetrating protection against moisture, freeze-thaw damage, and surface staining.

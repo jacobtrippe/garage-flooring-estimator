@@ -426,7 +426,7 @@ export default function Customers() {
                   <a href={`tel:${customer.phone}`} className="text-sm font-medium text-blue-600">Call</a>
                   <a href={`sms:${customer.phone}`} className="text-sm font-medium text-green-600">Text</a>
                 </div>
-                <p className="text-sm text-gray-500 mb-3">{customer.garageSqft} sqft · {customer.carPorts} car</p>
+                <p className="text-sm text-gray-500 mb-3">{customer.garageSqft} sqft · {customer.carPorts === 0 ? 'Commercial' : `${customer.carPorts} car`}</p>
 
                 {/* Primary action buttons */}
                 <div className="flex gap-2 mb-2">
@@ -661,7 +661,7 @@ export default function Customers() {
                           </div>
                         </td>
                         <td className="px-6 py-4">{customer.garageSqft}</td>
-                        <td className="px-6 py-4">{customer.carPorts}</td>
+                        <td className="px-6 py-4">{customer.carPorts === 0 ? 'Commercial' : customer.carPorts}</td>
                         {/* Actions cell */}
                         <td className="px-6 py-4">
                           <div className="flex gap-2 items-center flex-wrap">
@@ -925,6 +925,7 @@ export default function Customers() {
                   <option value="2">2</option>
                   <option value="3">3</option>
                   <option value="4">4+</option>
+                  <option value="0">Commercial</option>
                 </select>
               </div>
             </div>

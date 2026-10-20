@@ -48,6 +48,7 @@ export async function GET(
         date: today,
         quoteType: estimate.quoteType as any,
         exteriorSqft: estimate.exteriorSqft || undefined,
+        commercialSqft: estimate.commercialSqft || undefined,
         approvedDiscount: estimate.approvedDiscount || 0,
       })
     );

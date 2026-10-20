@@ -39,6 +39,7 @@ interface ProjectProgressPanelProps {
 function formatQuoteType(qt?: string): string {
   if (qt === 'exterior') return 'Exterior';
   if (qt === 'both') return 'Interior + Exterior';
+  if (qt === 'commercial') return 'Commercial';
   return 'Interior';
 }
 

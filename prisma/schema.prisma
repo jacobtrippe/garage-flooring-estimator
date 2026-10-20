@@ -36,6 +36,7 @@ model Estimate {
   pdfUrl                     String?
   installationDate           String?
   exteriorSqft               Float?
+  commercialSqft             Float?
   quoteType                  String         @default("interior")
   approvedDiscount           Float          @default(0)
   contractorSignatureDataUrl String?

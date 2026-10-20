@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerId, items, totalPrice, status = 'draft', quoteType = 'interior', exteriorSqft, approvedDiscount = 0 } = body;
+    const { customerId, items, totalPrice, status = 'draft', quoteType = 'interior', exteriorSqft, commercialSqft, approvedDiscount = 0 } = body;
 
     if (!customerId || !items || items.length === 0) {
       return NextResponse.json(
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         status,
         quoteType,
         exteriorSqft: exteriorSqft ?? null,
+        commercialSqft: commercialSqft ?? null,
         approvedDiscount,
         items: {
           createMany: {
