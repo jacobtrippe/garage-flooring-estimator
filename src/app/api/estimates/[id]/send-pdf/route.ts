@@ -97,11 +97,16 @@ export async function POST(
     const { error: emailError } = await resend.emails.send({
       from: 'Platinum Installs <noreply@platinuminstallstx.com>',
       to: estimate.customer.email,
-      subject: `Your Estimate & Service Agreement #${estimate.id.slice(-8).toUpperCase()}`,
+      subject: estimate.quoteType === 'commercial'
+        ? `Your Commercial Coating Proposal #${estimate.id.slice(-8).toUpperCase()}`
+        : `Your Estimate & Service Agreement #${estimate.id.slice(-8).toUpperCase()}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Hi ${estimate.customer.name},</h2>
-          <p>Your estimate and service agreement are ready! Both documents are attached to this email.</p>
+          <p>${estimate.quoteType === 'commercial'
+            ? 'Please find your commercial concrete coating proposal attached.'
+            : 'Your estimate and service agreement are ready! Both documents are attached to this email.'
+          }</p>
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 0; font-size: 14px; color: #666;">Total Amount</p>
             <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; color: #2f2f30;">$${emailTotal.toFixed(2)}</p>

@@ -112,7 +112,7 @@ export async function POST(
                   <!-- Footer -->
                   <tr>
                     <td style="background:#f9f9f9;border-top:1px solid #eee;padding:20px 32px;">
-                      <p style="margin:0;color:#aaa;font-size:12px;">Platinum Installs — Residential Concrete Coatings</p>
+                      <p style="margin:0;color:#aaa;font-size:12px;">Platinum Installs — ${estimate.quoteType === 'commercial' ? 'Commercial' : 'Residential'} Concrete Coatings</p>
                     </td>
                   </tr>
 

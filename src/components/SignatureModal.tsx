@@ -117,7 +117,7 @@ export default function SignatureModal({
         <EstimatePDF
           customer={customer} items={items} totalPrice={totalPrice}
           estimateId={estimateId} date={today} quoteType={quoteType}
-          exteriorSqft={exteriorSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
+          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
       ).toBlob();
 
@@ -182,7 +182,7 @@ export default function SignatureModal({
           customer={customer} items={items} totalPrice={totalPrice}
           signatureDataUrl={signatureDataUrl || undefined}
           estimateId={estimateId} date={today} quoteType={quoteType}
-          exteriorSqft={exteriorSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
+          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
       ).toBlob();
 

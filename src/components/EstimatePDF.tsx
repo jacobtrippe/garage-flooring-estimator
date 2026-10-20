@@ -525,7 +525,9 @@ export default function EstimatePDF({
             <Text style={styles.expectationList}>
               1) Sign customer agreement{'\n'}
               2) Confirm your preferred install date{'\n'}
-              3) Choose your design (base + flake color){'\n'}
+              {quoteType === "commercial"
+                ? `3) Review your coating specifications and confirm area measurements`
+                : `3) Choose your design (base + flake color)`}{'\n'}
               4) Provide prep instructions (simple and quick){'\n'}
               5) Arrive on time and complete the installation efficiently{'\n'}
               6) Walk the finished floor with you before closeout
