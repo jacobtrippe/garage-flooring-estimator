@@ -36,6 +36,7 @@ interface SignatureModalProps {
   jobPhotos?: { id: string; url: string }[];
   onPhotoAdded?: (photo: { id: string; url: string }) => void;
   onPhotoRemoved?: (photoId: string) => void;
+  commercialNotes?: string;
 }
 
 type Step = 'photo' | 'date' | 'estimate-review' | 'agreement-review' | 'customer-sign' | 'contractor-sign';
@@ -68,6 +69,7 @@ export default function SignatureModal({
   jobPhotos: initialJobPhotos,
   onPhotoAdded,
   onPhotoRemoved,
+  commercialNotes,
 }: SignatureModalProps) {
   const customerSignaturePadRef = useRef<SignatureCanvas>(null);
   const contractorSignaturePadRef = useRef<SignatureCanvas>(null);
@@ -117,7 +119,7 @@ export default function SignatureModal({
         <EstimatePDF
           customer={customer} items={items} totalPrice={totalPrice}
           estimateId={estimateId} date={today} quoteType={quoteType}
-          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
+          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} commercialNotes={commercialNotes} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
       ).toBlob();
 
@@ -182,7 +184,7 @@ export default function SignatureModal({
           customer={customer} items={items} totalPrice={totalPrice}
           signatureDataUrl={signatureDataUrl || undefined}
           estimateId={estimateId} date={today} quoteType={quoteType}
-          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
+          exteriorSqft={exteriorSqft} commercialSqft={commercialSqft} commercialNotes={commercialNotes} itemCategories={itemCategories} approvedDiscount={approvedDiscount}
         />
       ).toBlob();
 
@@ -354,9 +356,27 @@ export default function SignatureModal({
 
   if (step === 'date') {
     return (
-      <Shell title="Installation Date" onBack={() => setStep('photo')}>
+      <Shell title={quoteType === 'commercial' ? 'Send Proposal' : 'Installation Date'} onBack={() => setStep('photo')}>
         <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-          {!sendWithoutSignature ? (
+          {quoteType === 'commercial' ? (
+            <>
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <p className="text-sm text-gray-500 mb-3">This will send the commercial proposal to the customer for review.</p>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-0.5">Sending to</div>
+                  <div className="font-semibold text-gray-900 text-sm">{customer.email}</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setStep('photo')} className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 rounded-xl font-semibold text-sm">← Back</button>
+                <button
+                  onClick={handleSendWithoutSignature}
+                  disabled={saving}
+                  className="flex-[2] bg-[#2f2f30] text-white py-4 rounded-xl font-semibold text-sm disabled:opacity-50"
+                >{saving ? 'Sending…' : 'Send Proposal'}</button>
+              </div>
+            </>
+          ) : !sendWithoutSignature ? (
             <>
               <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
                 <div>
@@ -531,12 +551,12 @@ export default function SignatureModal({
             <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Payment Schedule</div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Deposit to schedule</span>
-                <span className="font-semibold text-gray-900 tabular-nums">${(totalPrice / 2).toFixed(2)}</span>
+                <span className="text-gray-500">{quoteType === 'commercial' ? 'Materials deposit' : 'Deposit to schedule'}</span>
+                <span className="font-semibold text-gray-900 tabular-nums">${quoteType === 'commercial' ? (totalPrice * 0.4).toFixed(2) : (totalPrice / 2).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Balance due at completion</span>
-                <span className="font-semibold text-gray-900 tabular-nums">${(totalPrice / 2).toFixed(2)}</span>
+                <span className="font-semibold text-gray-900 tabular-nums">${quoteType === 'commercial' ? (totalPrice * 0.6).toFixed(2) : (totalPrice / 2).toFixed(2)}</span>
               </div>
             </div>
           </div>

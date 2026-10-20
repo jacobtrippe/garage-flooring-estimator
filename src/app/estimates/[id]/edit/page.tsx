@@ -65,6 +65,7 @@ interface Estimate {
   quoteType: string;
   exteriorSqft: number | null;
   commercialSqft: number | null;
+  commercialNotes: string | null;
   approvedDiscount: number;
   installationDate?: string;
   signatureDataUrl?: string;
@@ -93,6 +94,7 @@ export default function EstimateEditor() {
   const [quoteType, setQuoteType] = useState<QuoteType>("interior");
   const [exteriorSqft, setExteriorSqft] = useState<number>(0);
   const [commercialSqft, setCommercialSqft] = useState<number>(0);
+  const [commercialNotes, setCommercialNotes] = useState<string>('');
   const [approvedDiscount, setApprovedDiscount] = useState<number>(0);
   const { status } = useSession();
   const router = useRouter();
@@ -144,6 +146,7 @@ export default function EstimateEditor() {
       setQuoteType((estimate.quoteType as QuoteType) || "interior");
       setExteriorSqft(estimate.exteriorSqft ?? 0);
       setCommercialSqft(estimate.commercialSqft ?? 0);
+      setCommercialNotes(estimate.commercialNotes ?? '');
       setApprovedDiscount(estimate.approvedDiscount ?? 0);
       if (estimate.installationDate) {
         setInstallationDate(estimate.installationDate);
@@ -242,6 +245,7 @@ export default function EstimateEditor() {
             quoteType,
             exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
             commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+            commercialNotes: quoteType === "commercial" ? commercialNotes : null,
             approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
           }),
         });
@@ -460,6 +464,7 @@ export default function EstimateEditor() {
           quoteType,
           exteriorSqft: (quoteType === "exterior" || quoteType === "both") ? exteriorSqft : null,
           commercialSqft: quoteType === "commercial" ? commercialSqft : null,
+          commercialNotes: quoteType === "commercial" ? commercialNotes : null,
           approvedDiscount: quoteType === "commercial" ? 0 : approvedDiscount,
         }),
       });
@@ -803,15 +808,27 @@ export default function EstimateEditor() {
                   </div>
 
                   {quoteType === "commercial" && (
-                    <div className="border-t pt-3 mt-3">
-                      <label className="font-semibold text-gray-700 block mb-2">Commercial Area (sqft)</label>
-                      <input
-                        type="number"
-                        value={commercialSqft || ""}
-                        onChange={(e) => setCommercialSqft(parseFloat(e.target.value) || 0)}
-                        className="w-full border-2 rounded px-3 py-2 text-gray-900"
-                        placeholder="Enter sqft"
-                      />
+                    <div className="border-t pt-3 mt-3 space-y-3">
+                      <div>
+                        <label className="font-semibold text-gray-700 block mb-2">Commercial Area (sqft)</label>
+                        <input
+                          type="number"
+                          value={commercialSqft || ""}
+                          onChange={(e) => setCommercialSqft(parseFloat(e.target.value) || 0)}
+                          className="w-full border-2 rounded px-3 py-2 text-gray-900"
+                          placeholder="Enter sqft"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-semibold text-gray-700 block mb-2">Project Notes</label>
+                        <textarea
+                          value={commercialNotes}
+                          onChange={(e) => setCommercialNotes(e.target.value)}
+                          rows={5}
+                          className="w-full border-2 rounded px-3 py-2 text-gray-900 text-sm resize-y"
+                          placeholder="Describe timeline, work hours (overnight or daytime), coating design, and any other project details..."
+                        />
+                      </div>
                     </div>
                   )}
                   {quoteType !== "commercial" && (
@@ -888,6 +905,7 @@ export default function EstimateEditor() {
           quoteType={quoteType}
           exteriorSqft={exteriorSqft}
           commercialSqft={commercialSqft}
+          commercialNotes={commercialNotes}
           itemCategories={Object.fromEntries(
             selectedItems.map((item) => {
               const section = sections.find((s) => s.products.some((p) => p.id === item.productId));

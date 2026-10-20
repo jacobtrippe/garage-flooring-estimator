@@ -45,7 +45,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { items, totalPrice, status, signatureDataUrl, contractorSignatureDataUrl, installationDate, quoteType, exteriorSqft, commercialSqft, approvedDiscount } = body;
+    const { items, totalPrice, status, signatureDataUrl, contractorSignatureDataUrl, installationDate, quoteType, exteriorSqft, commercialSqft, commercialNotes, approvedDiscount } = body;
 
     const updateData: any = {};
 
@@ -57,6 +57,7 @@ export async function PUT(
     if (quoteType !== undefined) updateData.quoteType = quoteType;
     if (exteriorSqft !== undefined) updateData.exteriorSqft = exteriorSqft;
     if (commercialSqft !== undefined) updateData.commercialSqft = commercialSqft;
+    if (commercialNotes !== undefined) updateData.commercialNotes = commercialNotes;
     if (approvedDiscount !== undefined) updateData.approvedDiscount = approvedDiscount;
 
     if (items && Array.isArray(items)) {

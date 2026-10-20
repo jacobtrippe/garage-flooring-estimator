@@ -302,6 +302,7 @@ interface EstimatePDFProps {
   commercialSqft?: number;
   itemCategories?: Record<string, string>;
   approvedDiscount?: number;
+  commercialNotes?: string;
 }
 
 export default function EstimatePDF({
@@ -316,6 +317,7 @@ export default function EstimatePDF({
   commercialSqft,
   itemCategories,
   approvedDiscount = 0,
+  commercialNotes,
 }: EstimatePDFProps) {
   const documentTitle =
     quoteType === "exterior"
@@ -510,29 +512,36 @@ export default function EstimatePDF({
           <View style={styles.paymentSection}>
             <Text style={styles.paymentTitle}>Scheduling & Payment</Text>
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Deposit to Schedule:</Text>
-              <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+              <Text style={styles.paymentLabel}>{quoteType === "commercial" ? "Materials Deposit:" : "Deposit to Schedule:"}</Text>
+              <Text style={styles.paymentAmount}>${quoteType === "commercial" ? (totalPrice * 0.4).toFixed(2) : (totalPrice / 2).toFixed(2)}</Text>
             </View>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Final Payment Due at Completion:</Text>
-              <Text style={styles.paymentAmount}>${(totalPrice / 2).toFixed(2)}</Text>
+              <Text style={styles.paymentAmount}>${quoteType === "commercial" ? (totalPrice * 0.6).toFixed(2) : (totalPrice / 2).toFixed(2)}</Text>
             </View>
           </View>
 
-          {/* What to Expect */}
-          <View style={styles.expectationSection}>
-            <Text style={styles.expectationTitle}>What to Expect</Text>
-            <Text style={styles.expectationList}>
-              1) Sign customer agreement{'\n'}
-              2) Confirm your preferred install date{'\n'}
-              {quoteType === "commercial"
-                ? `3) Review your coating specifications and confirm area measurements`
-                : `3) Choose your design (base + flake color)`}{'\n'}
-              4) Provide prep instructions (simple and quick){'\n'}
-              5) Arrive on time and complete the installation efficiently{'\n'}
-              6) Walk the finished floor with you before closeout
-            </Text>
-          </View>
+          {/* What to Expect / Project Details */}
+          {quoteType === "commercial" ? (
+            commercialNotes ? (
+              <View style={styles.expectationSection}>
+                <Text style={styles.expectationTitle}>Project Details</Text>
+                <Text style={styles.expectationList}>{commercialNotes}</Text>
+              </View>
+            ) : null
+          ) : (
+            <View style={styles.expectationSection}>
+              <Text style={styles.expectationTitle}>What to Expect</Text>
+              <Text style={styles.expectationList}>
+                1) Sign customer agreement{'\n'}
+                2) Confirm your preferred install date{'\n'}
+                3) Choose your design (base + flake color){'\n'}
+                4) Provide prep instructions (simple and quick){'\n'}
+                5) Arrive on time and complete the installation efficiently{'\n'}
+                6) Walk the finished floor with you before closeout
+              </Text>
+            </View>
+          )}
 
           {/* Signature */}
           <View style={styles.signatureSection}>

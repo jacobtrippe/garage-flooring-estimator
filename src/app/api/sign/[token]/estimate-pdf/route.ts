@@ -49,6 +49,7 @@ export async function GET(
         quoteType: estimate.quoteType as any,
         exteriorSqft: estimate.exteriorSqft || undefined,
         commercialSqft: estimate.commercialSqft || undefined,
+        commercialNotes: estimate.commercialNotes || undefined,
         approvedDiscount: estimate.approvedDiscount || 0,
       })
     );

@@ -53,6 +53,7 @@ model Estimate {
   sealerType                 String?
   storageRequired            Boolean        @default(false)
   storageNotes               String?
+  commercialNotes            String?
   materialsPurchased         Boolean        @default(false)
   projectCompleted           Boolean        @default(false)
   projectCompletedAt         DateTime?
