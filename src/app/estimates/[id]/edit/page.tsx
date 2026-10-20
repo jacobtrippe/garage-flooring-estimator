@@ -385,39 +385,44 @@ export default function EstimateEditor() {
   const handleProductToggle = (product: Product) => {
     const existingItem = selectedItems.find((item) => item.productId === product.id);
     const productSection = sections.find((s) => s.id === product.sectionId);
+    const isCommercialSection = productSection?.category === "commercial";
+    const isOvernightAddon = isCommercialSection && product.name.toLowerCase().includes("overnight");
     const isMultiSelectSection = productSection?.title === "Discounts" || productSection?.title === "Exterior Prep";
 
     if (existingItem) {
-      // Deselect if already selected
       const newItems = selectedItems.filter((item) => item.productId !== product.id);
       setSelectedItems(recalculateItems(newItems));
     } else {
       let newItems = [...selectedItems];
 
-      // For non-multi-select sections, remove other products from the same section (one-per-section)
-      if (!isMultiSelectSection) {
+      if (isCommercialSection && !isOvernightAddon) {
+        // Selecting a main coating: evict all other main coatings (keep overnight add-on)
+        const allProducts = sections.flatMap((s) => s.products);
+        newItems = newItems.filter((item) => {
+          const itemProduct = allProducts.find((p) => p.id === item.productId);
+          if (!itemProduct) return true;
+          const itemSection = sections.find((s) => s.id === itemProduct.sectionId);
+          if (itemSection?.category !== "commercial") return true;
+          return itemProduct.name.toLowerCase().includes("overnight"); // keep overnight
+        });
+      } else if (!isMultiSelectSection && !isCommercialSection) {
+        // Standard one-per-section rule for non-commercial sections
         newItems = newItems.filter((item) => {
           const itemProduct = sections
             .flatMap((section) => section.products)
             .find((p) => p.id === item.productId);
-
-          // Keep item only if it's from a different section
-          if (itemProduct && itemProduct.sectionId === product.sectionId) {
-            return false; // Remove it (same section)
-          }
-          return true; // Keep it (different section or not found)
+          if (itemProduct && itemProduct.sectionId === product.sectionId) return false;
+          return true;
         });
       }
-      // For multi-select sections (Discounts, Exterior Prep), allow multiple selections - just add without removing
 
-      // Add the new product
       newItems.push({
         productId: product.id,
         name: product.name,
         pricingType: product.pricingType,
         unitPrice: product.price,
         quantity: 1,
-        totalPrice: 0, // Will be set by recalculateItems
+        totalPrice: 0,
       });
 
       setSelectedItems(recalculateItems(newItems));
