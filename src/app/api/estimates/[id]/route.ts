@@ -6,11 +6,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = await requireAuth();
-  if (authError) return authError;
   try {
     const { id } = await params;
     const byToken = request.nextUrl.searchParams.get('byToken') === 'true';
+
+    if (!byToken) {
+      const authError = await requireAuth();
+      if (authError) return authError;
+    }
 
     const estimate = await prisma.estimate.findUnique({
       where: byToken ? { signatureToken: id } : { id },
