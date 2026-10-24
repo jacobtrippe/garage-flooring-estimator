@@ -63,7 +63,7 @@ export default function SignPage({ params }: { params: Promise<{ token: string }
     if (!token) return;
     const fetchEstimate = async () => {
       try {
-        const res = await fetch(`/api/estimates/${token}?byToken=true`);
+        const res = await fetch(`/api/sign/${token}`);
         if (!res.ok) {
           setError('Signing link not found or has expired.');
           setLoading(false);

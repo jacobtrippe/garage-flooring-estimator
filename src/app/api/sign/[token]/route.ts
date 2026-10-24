@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  try {
+    const { token } = await params;
+
+    const estimate = await prisma.estimate.findUnique({
+      where: { signatureToken: token },
+      include: {
+        items: { select: { id: true, productId: true, name: true, price: true } },
+        customer: true,
+      },
+    });
+
+    if (!estimate) {
+      return NextResponse.json({ error: 'Signing link not found or has expired.' }, { status: 404 });
+    }
+
+    if (estimate.signatureTokenExpiresAt && new Date(estimate.signatureTokenExpiresAt) < new Date()) {
+      return NextResponse.json({ error: 'Signing link not found or has expired.' }, { status: 410 });
+    }
+
+    return NextResponse.json({ estimate });
+  } catch (error) {
+    console.error('GET /api/sign/[token] error:', error);
+    return NextResponse.json({ error: 'Failed to load agreement.' }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
