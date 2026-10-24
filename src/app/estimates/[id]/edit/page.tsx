@@ -373,16 +373,6 @@ export default function EstimateEditor() {
       return { ...item, totalPrice: baseSubtotal * (product.price / 100) };
     });
 
-    // Auto-surcharge: spread $200 evenly across selected PER_SQFT items (not for commercial)
-    const perSqftCount = pass2.filter((i) => i.pricingType === "PER_SQFT").length;
-    if (perSqftCount > 0 && quoteType !== "commercial") {
-      const surchargePerItem = 200 / perSqftCount;
-      return pass2.map((item) =>
-        item.pricingType === "PER_SQFT"
-          ? { ...item, totalPrice: item.totalPrice + surchargePerItem }
-          : item
-      );
-    }
     return pass2;
   };
 
@@ -817,16 +807,6 @@ export default function EstimateEditor() {
                           onChange={(e) => setCommercialSqft(parseFloat(e.target.value) || 0)}
                           className="w-full border-2 rounded px-3 py-2 text-gray-900"
                           placeholder="Enter sqft"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-semibold text-gray-700 block mb-2">Project Notes</label>
-                        <textarea
-                          value={commercialNotes}
-                          onChange={(e) => setCommercialNotes(e.target.value)}
-                          rows={5}
-                          className="w-full border-2 rounded px-3 py-2 text-gray-900 text-sm resize-y"
-                          placeholder="Describe timeline, work hours (overnight or daytime), coating design, and any other project details..."
                         />
                       </div>
                     </div>
